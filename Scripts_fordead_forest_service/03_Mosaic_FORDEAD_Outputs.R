@@ -112,100 +112,104 @@ for (i in index.list) {
   conf_merged = vrt(conf.res.die)
   # Create a virtual raster (VRT) from the list of tiled valid observation files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_valid_obs_", i, "_merged.tif")))
+  # Write the merged valid observation raster to a TIFF file.
   
   
   # merge start date dieback
-  
+  # List all tiled first date of dieback raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "first_date_dieback.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled first date of dieback files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_dirst_date_dieback_", i, "_merged.tif")))
   
   
   # merge start date unconfirmed dieback
-  
+  # List all tiled first date of unconfirmed dieback raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "first_date_unconfirmed_dieback.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled unconfirmed dieback files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_dirst_date_unconfirmed_dieback_", i, "_merged.tif")))
   
   gc()
   
   # merge start date unconfirmed dieback
-  
+  # List all tiled count dieback raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "count_dieback.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled count dieback files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_count_dieback_", i, "_merged.tif")))
   
   # merge start date cum diff stress
-  
+  # List all tiled cumulative difference stress raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "cum_diff_stress.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled cumulative difference stress files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_cum_diff_stress_", i, "_merged.tif")))
   
   # merge start date dates stress
-  
+  # List all tiled dates stress raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "dates_stress.tif$", full.names = T)
   conf.res.die = conf.res.die[!grepl("nb_dates", conf.res.die)]
+  # Filter out files that contain "nb_dates" in their names to avoid processing them as stress dates.
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled dates stress files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_dates_stress_", i, "_merged.tif")))
   
-  stress_durations = conf_merged[[2]] - conf_merged[[1]]# defined as the difference between first anomaly and first normal obs, second to second, ...
+  stress_durations = conf_merged[[2]] - conf_merged[[1]] # Calculate stress durations as the difference between the first anomaly and first normal observation.
   
   for (m in 2:((nlyr(conf_merged)-1)/2)) stress_durations = c(stress_durations, conf_merged[[2*m]] - conf_merged[[2*m-1]])
+  # Calculate stress durations for multiple periods.
   
   writeRaster(stress_durations, paste0(for_out_path, paste0("output_dates_stress_diff_", i, "_merged.tif")))
+  # Write the calculated stress durations to a TIFF file.
   
   gc()
   
   # merge nb date dates stress
-  
+  # List all tiled number of dates stress raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "nb_dates_stress.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled number of dates stress files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_nb_dates_stress_", i, "_merged.tif")))
   
   # merge nb periods stress
-  
+  # List all tiled number of periods stress raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "nb_periods_stress.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled number of periods stress files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_nb_periods_stress_", i, "_merged.tif")))
   
   # merge stress index
-  
+  # List all tiled stress index raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "stress_index.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled stress index files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_stress_index_", i, "_merged.tif")))
   
   gc()
   
   # merge soil status
-  
+  # List all tiled soil status raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "state_soil.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled soil status files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("state_soil_", i, "_merged.tif")))
   
   # merge soil count
-  
+  # List all tiled soil count raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "count_soil.tif$", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled soil count files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("count_soil_", i, "_merged.tif")))
   
   gc()
