@@ -29,21 +29,24 @@
 #index.list = c("NDVI", "NDWI")
 
 for (i in index.list) {
-  
+  # Iterate through each vegetation index (e.g., NDVI, NDWI) to mosaic its corresponding tiled outputs.
   gc()
   
+  # List output directories for the current vegetation index.
   dirs.out = list.dirs(for_out_path, full.names = T, recursive = F)
   dirs.out = dirs.out[grep(paste0("^fordead_output_", i), basename(dirs.out))]
   
   
+  # List output directories for the current vegetation index.
   dirs.out = list.dirs(for_out_path, full.names = T, recursive = F)
   dirs.out = dirs.out[grep(paste0("^fordead_output_", i), basename(dirs.out))]
-  dirs.out = dirs.out[nchar(dirs.out) == 98] # revert to 98 / adjust if running in a subfolder or if for_out_path name has changed
+  dirs.out = dirs.out[nchar(dirs.out) == 98] # Filter directories based on character length to select specific output folders. This value (98) may need adjustment if the `for_out_path` name changes or if running in a subfolder.
   
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "confidence_index.tif", full.names = T)
   
   # dieback
   
+  # List all tiled dieback shapefiles within the identified output directories.
   per.res.die = list.files(dirs.out, recursive = T, pattern = "dieback.shp", full.names = T)
   
   output = vect(per.res.die[1])
@@ -52,9 +55,11 @@ for (i in index.list) {
     output = rbind(a, output)
   }
   writeVector(output, paste0(for_out_path, paste0("output_", i, "_merged.shp")))
+  # Write the merged dieback shapefile to the output directory.
   
   # stress
   
+  # List all tiled stress period shapefiles within the identified output directories.
   per.res.die = list.files(dirs.out, recursive = T, pattern = "stress_periods.shp$", full.names = T)
   
   output = vect(per.res.die[1])
@@ -63,11 +68,13 @@ for (i in index.list) {
     output = rbind(a, output)
   }
   writeVector(output, paste0(for_out_path, paste0("output_stress_", i, "_merged.shp")))
+  # Write the merged stress period shapefile to the output directory.
   
   gc()
   
   # soil
   
+  # List all tiled soil shapefiles within the identified output directories.
   per.res.die = list.files(dirs.out, recursive = T, pattern = "periodic_results_soil.shp$", full.names = T)
   
   output = vect(per.res.die[1])
@@ -76,32 +83,34 @@ for (i in index.list) {
     output = rbind(a, output)
   }
   writeVector(output, paste0(for_out_path, paste0("output_soil_", i, "_merged.shp")))
+  # Write the merged soil shapefile to the output directory.
   
   # merge confidence indices
-  
+  # List all tiled confidence index raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "confidence_index.tif", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled confidence index files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_confidence_", i, "_merged.tif")))
+  # Write the merged confidence index raster to a TIFF file.
   
   
   # merge nodata masks
-  
+  # List all tiled nodata mask raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "mask_nodata.tif", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled nodata mask files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_nodata_", i, "_merged.tif")))
   
   gc()
   
   # merge n obs
-  
+  # List all tiled valid observation raster files within the identified output directories.
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "valid_obs.tif", full.names = T)
   
   conf_merged = vrt(conf.res.die)
-  
+  # Create a virtual raster (VRT) from the list of tiled valid observation files.
   writeRaster(conf_merged, paste0(for_out_path, paste0("output_valid_obs_", i, "_merged.tif")))
   
   
