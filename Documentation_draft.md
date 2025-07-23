@@ -1,4 +1,4 @@
-# Forest Damage Detection 
+# Forest Damage Detection
 
 Service to the forest service of South Tyrol
 
