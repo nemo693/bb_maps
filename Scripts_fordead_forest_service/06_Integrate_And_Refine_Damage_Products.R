@@ -294,8 +294,9 @@ if (confirm_write(vector_filename_year)) {
   writeVector(yearly_vect_25832, vector_filename_year, overwrite = TRUE)
 }
 
-cat("Processing completed.\n")
+print("Step 4 was successful") # Indicate successful completion of the processing step.
+print(paste("Outputs written to:", outfold)) # Print the path where the outputs are saved.
 
-dir.create(file.path(outfold, "post_proc_intermediates"), showWarnings = FALSE)
-files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))]
-file.rename(files, file.path(outfold, "post_proc_intermediates", basename(files)))
+dir.create(outfold, showWarnings = FALSE) # Create the output folder if it doesn't already exist, suppressing warnings.
+files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))] # List all files in the output folder that do not contain "final" in their name. These are considered intermediate files to be moved.
+file.rename(files, file.path(outfold, "post_proc_intermediates", basename(files))) # Move the intermediate files to the 'post_proc_intermediates' subdirectory.
