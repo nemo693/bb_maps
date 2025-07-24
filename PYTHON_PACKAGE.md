@@ -1,0 +1,71 @@
+### Python Package (`fordead_plain`)
+
+The `fordead_plain` package contains the core logic for the damage detection. The R scripts call specific modules within this package.
+
+-   **`fordead_plain/steps/step1_compute_masked_vegetationindex.py`**
+    -   **Purpose:** Computes masks and masked vegetation indices for each Sentinel date, filtering by cloudiness and applying source/soil/user-defined masks.
+    -   **Inputs:**
+        -   Sentinel-2 data directory.
+        -   Cloudiness threshold, interpolation order, Sentinel source, mask application flags, soil detection flag, formula for user mask, vegetation index type, compression flag, ignored periods, extent shapefile, path to VI dictionary.
+    -   **Outputs:**
+        -   Vegetation index data (NetCDF).
+        -   Mask data (GeoTIFF).
+        -   Soil data (GeoTIFFs for state, first date, count).
+        -   Updates `TileInfo` object.
+    -   **Key Actions:**
+        -   Initializes/imports `TileInfo` object.
+        -   Adds parameters to `TileInfo`.
+        -   Detects and adds Sentinel data paths to `TileInfo`.
+        -   Computes cloudiness percentage.
+        -   Imports and resamples Sentinel data.
+        -   Computes vegetation index.
+        -   Computes and applies various masks (source, soil, user-defined).
+        -   Writes vegetation index and mask outputs.
+        -   Saves `TileInfo` object.
+-   **`fordead_plain/steps/step2_train_model.py`**
+    -   **Purpose:** Uses Sentinel dates to train a periodic vegetation index model capable of predicting the vegetation index at any date.
+    -   **Inputs:**
+        -   Data directory (containing vegetation indices and masks from Step 1).
+        -   Minimum number of valid dates for model computation.
+        -   Minimum and maximum last dates for training.
+        -   Flag for correcting VI using large-scale median VI.
+    -   **Outputs:**
+        -   Model coefficients (`coeff_model.tif`).
+        -   First detection date index (`first_detection_date_index.tif`).
+        -   Sufficient coverage mask (`sufficient_coverage_mask.tif`).
+        -   Updates `TileInfo` object.
+    -   **Key Actions:**
+        -   Imports `TileInfo` object.
+        -   Adds parameters to `TileInfo`.
+        -   Imports stacked masked vegetation indices and masks.
+        -   Determines detection dates.
+        -   Computes `sufficient_coverage_mask`.
+        -   Optionally corrects VI using large-scale median VI.
+        -   Models the vegetation index.
+        -   Writes model outputs.
+        -   Saves `TileInfo` object.
+-   **`fordead_plain/steps/step3_dieback_detection.py`**
+    -   **Purpose:** Detects anomalies by comparing the vegetation index with its model prediction. Identifies pixels suffering from dieback based on successive anomalies and saves information on stress periods.
+    -   **Inputs:**
+        -   Data directory (containing model outputs from Step 2).
+        -   Anomaly threshold.
+        -   Maximum number of stress periods.
+        -   Stress index mode.
+        -   Vegetation index type and path to VI dictionary (if step1 was skipped).
+    -   **Outputs:**
+        -   Anomaly data (GeoTIFFs for each date).
+        -   Dieback data (GeoTIFFs for state, first date, unconfirmed first date, count).
+        -   Stress data (GeoTIFFs for dates, number of periods, cumulative difference, number of dates, stress index).
+        -   `too_many_stress_periods_mask.tif`.
+        -   Updates `TileInfo` object.
+    -   **Key Actions:**
+        -   Imports `TileInfo` object.
+        -   Adds parameters to `TileInfo`.
+        -   Imports necessary data (first detection date index, model coefficients, dieback/stress data).
+        -   Imports masked vegetation indices for new dates.
+        -   Predicts vegetation index using the model.
+        -   Detects anomalies.
+        -   Detects dieback based on anomalies.
+        -   Saves stress period information.
+        -   Writes anomaly, dieback, and stress data outputs.
+        -   Saves `TileInfo` object.
