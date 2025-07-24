@@ -20,7 +20,7 @@ The data flows through the application in a sequential manner:
 
 ## Data Flow Diagram
 
-```mermaid
+``` mermaid
 graph TD
     subgraph "R Scripts"
         A["00_RUN_Province_Damage_Update.R (Orchestrator)"] --> B["01_Import_S2_data.R"];
@@ -47,7 +47,7 @@ graph TD
     end
 
     subgraph "Outputs"
-        H --> K[Final Damage Products (GeoTIFF, Shapefile)];
+        H --> K["Final Damage Products (GeoTIFF, Shapefile)"];
     end
 
     style D fill:#f9f,stroke:#333,stroke-width:2px

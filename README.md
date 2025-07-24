@@ -8,9 +8,9 @@ This documentation is intended to guide a new user through the pipeline's archit
 
 For a complete understanding of the pipeline, please refer to the following documents:
 
-- **[OVERVIEW.md](./OVERVIEW.md):** A high-level summary of the application's purpose and design.
-- **[HOW_TO_RUN.md](./HOW_TO_RUN.md):** Step-by-step instructions for setting up the environment and executing the pipeline.
-- **[DATA_FLOW.md](./DATA_FLOW.md):** A detailed description and diagram of the data flow between the different scripts and processes.
-- **[R_SCRIPTS.md](./R_SCRIPTS.md):** Detailed documentation for each of the R scripts that control the pipeline.
-- **[PYTHON_PACKAGE.md](./PYTHON_PACKAGE.md):** Detailed documentation for the core Python package and its wrapper scripts.
-- **[IMPROVEMENTS.md](./IMPROVEMENTS.md):** A list of identified inconsistencies and areas for potential improvement in the codebase.
+-   [**OVERVIEW.md**](./OVERVIEW.md)**:** A high-level summary of the application's purpose and design.
+-   [**HOW_TO_RUN.md**](./HOW_TO_RUN.md)**:** Step-by-step instructions for setting up the environment and executing the pipeline.
+-   [**DATA_FLOW.md**](./DATA_FLOW.md)**:** A detailed description and diagram of the data flow between the different scripts and processes.
+-   [**R_SCRIPTS.md**](./R_SCRIPTS.md)**:** Detailed documentation for each of the R scripts that control the pipeline.
+-   [**PYTHON_PACKAGE.md**](./PYTHON_PACKAGE.md)**:** Detailed documentation for the core Python package and its wrapper scripts.
+-   [**IMPROVEMENTS.md**](./IMPROVEMENTS.md)**:** A list of identified inconsistencies and areas for potential improvement in the codebase.
