@@ -53,6 +53,8 @@ library(terra)
 # ==============================================================================
 
 # Load base raster
+
+### CHECK IN THE OTHER SCRITPS AS THIS LINE IS WRONG AND IT WAS COPIED FROM SOMEWHERE ELSE
 base = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/LANDSAT_MOSAIC_4BANDS_CENTER/final/SENTINEL2_MOSAIC_19840601_19900930_19870715_7C_CIR.tif")[[1]]
 
 # Load current detection results

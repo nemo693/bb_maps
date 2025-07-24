@@ -38,12 +38,14 @@ library(reticulate)
 
 ####### SETTINGS ########
 
-run.fordead = T
-get_new_images = T # needed on if forcing mask computation
-overwrite = T
-combine_fmask = F
-fmask_py_only = F
+# Control flags for script execution and data handling.
+run.fordead = T       # Flag to enable/disable the FORDEAD algorithm execution.
+get_new_images = T    # Flag to enable/disable fetching new satellite images (needed if forcing mask computation).
+overwrite = T         # Flag to enable/disable overwriting existing output files.
+combine_fmask = F     # Flag to enable/disable combining with fmask (external mask).
+fmask_py_only = F     # Flag to enable/disable fmask processing only via Python.
 
+# Conda environment and Python executable paths for `reticulate`.
 conda = "/opt/conda/bin/conda"
 myenv_python = "/opt/conda/envs/fordead_plain/bin/python "
 myenv_bin = "/opt/conda/envs/fordead_plain/bin"
@@ -193,29 +195,31 @@ sentinel_only = T
 
 ####### RUN ########
 
-# for every grid
-for(g in grids) { #what is this?? shouldn't it just be tiles?
+# Loop through each grid (tile) for processing.
+for(g in grids) {
   
-  gc()
+  gc() # Perform garbage collection to free up memory.
   
-  updating = F
+  updating = F # Initialize a flag to track if the current process is an update.
   
-  print(paste0("processing grid ", g))
+  print(paste0("processing grid ", g)) # Display the current grid being processed for user information.
   
   #### if boa folder !exists ####
   
-  # function for renaming bands of a raster according to spectral bands and dates
+  # Function to rename bands of a raster according to spectral bands and dates.
+  # This is crucial for consistent naming conventions across different BOA images.
   myf = function(boa) {
-    #print(boa)
-    
+    # Load the BOA TIFF file as a raster image.
     img = rast(boa)
     
+    # Extract the date from the filename (assuming it's part of the filename).
     dd = strsplit(boa, "/")
     dd = as.data.frame(dd)
-    dd = dd[nrow(dd),] # get the last element
-    dd = substr(dd, 1, nchar(dd)-4)
-    names(img) <- paste0(rep(dd, each = 10), c("_B02", "_B03", "_B04", "_B05", "_B06", "_B07", "_B08", "_B8A", "_B11", "_B12")
-    )
+    dd = dd[nrow(dd),] # Get the last element (filename).
+    dd = substr(dd, 1, nchar(dd)-4) # Remove file extension.
+    
+    # Rename the raster bands to include the date and band name (e.g., "YYYYMMDD_B02").
+    names(img) <- paste0(rep(dd, each = 10), c("_B02", "_B03", "_B04", "_B05", "_B06", "_B07", "_B08", "_B8A", "_B11", "_B12"))
     return(img)
   }
   
@@ -223,18 +227,21 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
   
   ### FIRST TIME ####
   
+  # Check if the BOA output directory for the current grid exists.
+  # If it does not exist, it indicates an initial run for this grid, and the script will stop.
   if(!dir.exists(paste0(out_path, g, "_boa"))) {
     
-    print("directory does not exist") # if the directory does not exist, return an error
-    stop()
+    print("directory does not exist") # Inform the user that the directory is missing.
+    stop() # Halt execution as the required input directory is not found.
     
-  }    else { # UPDATE: if the directory exists, check that all the images have been copied there, add the missing ones
+  }    else { # If the BOA output directory already exists, this indicates an update scenario.
     
-    updating = T # set flag
+    updating = T # Set the 'updating' flag to TRUE, indicating an update operation.
     
-    # list the original BOA files from SEN2
+    # List all original BOA TIFF files from the Sentinel-2 input path for the current grid.
     or_f = list.files(paste0(in_path, g), full.names = T)
     or_f = or_f[grep("BOA.tif$", or_f)]
+    # If `sentinel_only` is TRUE, filter the list to include only Sentinel-2 files.
     if(sentinel_only) {
       or_f = or_f[grep("SEN2", or_f)]  
     } 
@@ -251,117 +258,117 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
     
     ##### get new images #####
     
-    if((length(p_f)-1) < length(or_f) & get_new_images) { # if the images in the source folder are more than those that were processed, get the new ones
+    if((length(p_f)-1) < length(or_f) & get_new_images) { # Check if there are more original images than already processed ones and if `get_new_images` flag is true.
       
-      print(paste0("Adding missing elements. Tile: ", g))
+      print(paste0("Adding missing elements. Tile: ", g)) # Inform the user that new elements are being added.
       
-      # update the mask qai version file - needed here?
+      # Update the QAI version file. This might be needed to ensure consistency in mask generation.
       saveRDS(qai_version, paste0(script_path, "/qai_version"))
       
-      # create temporary directory for storing the exploded images
+      # Create a temporary directory for storing exploded (unpacked) images.
       out_img = paste0(out_path, "tmp/")
+      # Remove any existing files or directories within the temporary directory to ensure a clean state.
       file.remove(list.files(out_img, full.names = T, recursive = T), recursive = T)
       file.remove(list.dirs(out_img, full.names = T, recursive = T), recursive = T)
       file.remove(list.dirs(out_img, full.names = T, recursive = T), recursive = T)
       dir.create(out_img)
       
-      # get the paths to the original boa files
+      # Get the paths to the original BOA files for the current grid.
       f = list.files(paste0(in_path, g), full.names = T)
       f = f[grep("BOA.tif$", f)]
       f = f[grep("SEN2", f)]
       
-      # rename bands according to spectral bands and dates
+      # Rename bands of the newly fetched images for consistency.
       img = myf(boa = f)
       
-      # get the list of dates from the paths
-      # THE DATES COULD PROBABLY BE EXTRACTED AT THE VERY BEGINNING, ONCE FOR ALL (in source and in target)
+      # Extract unique dates from the band names and filter by specified months.
       dates = unique(substr(names(img), 1, 8))
       dates = dates[substr(dates, 5,6) %in% months]
       
-      ##### boa ####
-      # get only sentinel 2 boa files and transform them according to the needed folder structure in the /tmp folder #
+      ##### Process BOA Data and QAI Masks #####
+      # This section processes Sentinel-2 BOA files and their corresponding QAI masks,
+      # organizing them into a structured temporary folder before copying to the main BOA directory.
       
-      # Run through the dates and the bands. Create a folder for each date and 
-      # write each band separately
-      
-      # get the qai paths
+      # Get the paths to the QAI files for the current grid.
       fm = list.files(paste0(in_path, g), full.names = T)
       fm = fm[grep("QAI.tif$", fm)]
       fm = fm[grep("SEN2", fm)]
       
-      # if there is a mismatch, quit. (errors were present at some point, this
-      # raises the issue)
+      # Check for a mismatch between the number of QAI files and BOA files.
+      # If there's a mismatch, it indicates a data integrity issue, and the script will stop.
       if(length(fm) != length(f)) {
         print("Number of masks and images not matching. Stopping.")
         stop()
       }
       
-      # process images
+      # Process each image by date.
       for(d in dates) {
-        # if a folder for the given date (assumed to contain the processed boa and
-        # qai) does not exist yet, create it and copy there the data
+        # If a folder for the given date (assumed to contain processed BOA and QAI data) does not exist,
+        # create it and copy the relevant data.
         if(! d %in% basename(p_f)) {
           
-          file.remove(paste0(out_img, d))
-          dir.create(paste0(out_img, d))
+          file.remove(paste0(out_img, d)) # Ensure the temporary directory for this date is clean.
+          dir.create(paste0(out_img, d)) # Create the temporary directory for the current date.
           
+          # Write each band of the image to a separate TIFF file within the temporary directory.
           for(i in 1:10) {
             r = img[[grep(d, names(img))[i]]]
             writeRaster(r, paste0(out_img, d, "/", names(img)[grep(d, names(img))[i]], ".tif"), overwrite = F)
           }
-          print(paste0("image ", d))
+          print(paste0("image ", d)) # Indicate which image is being processed.
         }
       }     
       
-      print("skipping masks")
+      print("skipping masks") # Placeholder comment, masks are handled separately.
       
-      ##### !!! masks to be defined uniquely in a function/two #####
+      ##### Masks Definition (To be defined uniquely in a function/two) #####
       
-      # get the paths
+      # Re-get the paths to the QAI files for the current grid.
       f = list.files(paste0(in_path, g), full.names = T)
       f = f[grep("QAI.tif$", f)]
       f = f[grep("SEN2", f)]
       
-      # create the EMPTY (for now) masks folder
+      # Create empty mask folders for dates that haven't been processed yet.
       for(d in dates[! dates %in% basename(p_f)]) {
         mdir = paste0(out_img, d, "/masks")
-        file.remove(mdir)
-        dir.create(mdir)
+        file.remove(mdir) # Ensure the mask directory is clean.
+        dir.create(mdir) # Create the mask directory.
       }
       
-      # copy to the boa folder
+      # Copy the processed temporary BOA and mask folders to the main BOA output folder.
       file.copy(from = list.dirs(out_img, full.names = T)[-1], 
                 to = paste0(out_path, g, "_boa/"), 
                 recursive = T)
-      # end of update
+      # End of the update process for new images.
     }
     
     #### QAI VERSION CHECK ####
+    # This section manages the QAI (Quality Assessment Index) masks, ensuring the correct version is active.
     
-    # if the folder exists, rename masks according to the version id (save a flag)
+        # If the BOA output folder exists, this section handles renaming masks according to the version ID.
+    # This is part of managing different QAI mask versions and ensuring consistency.
     
-    # get the dates - to revise and make faster, for now just copied from above
-    print(g)
-    
-    # get the paths to the boa files - ALSO HERE, TO MAKE ONCE AT THE BEGINNING
+    # TODO: This block of code (listing BOA files, renaming bands, extracting dates) is redundant
+    # as these operations are already performed earlier in the script. Consider refactoring.
+    # List original BOA files for the current grid.
     f = list.files(paste0(in_path, g), full.names = T)
     f = f[grep("BOA.tif$", f)]
     f = f[grep("SEN2", f)]
     
-    # rename according to bands and dates
+    # Load images and rename bands for consistency.
     img = myf(boa = f)
     
-    # get the list of dates from the paths
+    # Extract unique dates from the band names and filter by specified months.
     dates = unique(substr(names(img), 1, 8))
     dates = dates[substr(dates, 5,6) %in% months]
     
-    # read the last mask version used to create masks
+    # Read the last QAI mask version used to create masks from a saved RData file.
     curr_qai_version = readRDS(paste0(script_path, "/qai_version")) 
     
-    print(paste0("current qai version is: ", curr_qai_version))
+    print(paste0("current qai version is: ", curr_qai_version)) # Display the currently active QAI version for user information.
     
-    # if a new qai version is detected, the corresponding masks are generated or
-    # activated and the previous ones are renamed and inactivated
+    # If a new QAI version is detected, or if an update/force mask generation is triggered,
+    # this block generates or activates the corresponding masks and deactivates previous ones.
     if(curr_qai_version != qai_version | updating == T | force_masks == T) {
       
       print("checkpoint 1")
@@ -377,6 +384,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       # get/update the masks
       if(get_new_images == T) {
         
+        # If `force_masks` is FALSE, the script checks for existing masks and activates them if they match the target QAI version.
         if(force_masks == F) {
           
           avail_masks = list.files(boa_d, recursive = T, full.names = T, pattern = qai_version)
@@ -385,9 +393,11 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
           avail_masks_dates = substr(basename(avail_masks), 5, 12)
           missing_masks = dates[!(dates %in% avail_masks_dates)]
           
+          # If the currently active masks do not match the target QAI version, proceed to update them.
           if(!(length(grep(qai_version, active_masks)) == length(dates))) { # if the active masks match the ones to be activated, do nothing
             
             # inactivate active masks not matching the target ones if any
+            # If there are any active masks that do not match the target QAI version, inactivate them.
             if(!identical(active_masks, character(0))) {
               file.rename(from = active_masks[!grepl(qai_version, active_masks)], 
                           to = gsub(pattern = "CLM", "INA", x = active_masks[!grepl(qai_version, active_masks)]))
@@ -395,10 +405,8 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
             
             
             print("bulk activation")
-            # activate target masks
-            
+            # Activate the target masks by renaming them from 'INA' (inactive) to 'CLM' (active).
             new_names = gsub(pattern = "INA", replacement = "CLM", x = avail_masks)
-            
             file.rename(from = avail_masks, 
                         to = new_names)
           } 
@@ -408,12 +416,11 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
         print("missing masks:")
         print(missing_masks)
         
+        # Iterate through each missing mask date to either deactivate old masks or create new ones.
         for(d in missing_masks) {
           
-          # inactivate previous mask(s) (CLM to INA)
           bbbb = paste0(boa_d, "/", d, "/masks/")
-          
-          # if a mask already exist for this date, deactivate it
+          # If a mask already exists for this date, deactivate it by renaming it from 'CLM' (active) to 'INA' (inactive).
           if (length(list.files(bbbb, pattern = "_CLM_")) != 0) {
             file.rename(from = paste0(bbbb, list.files(bbbb, pattern = "_CLM_")), 
                         to = paste0(bbbb, substr(list.files(bbbb, pattern = "_CLM_"), 1, 13),
@@ -421,7 +428,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
                                     substr(list.files(bbbb, pattern = "_CLM_"), 17, 25)))
           }
           
-          # if a mask matching the desired qai version exists, activate it
+          # If a mask matching the desired QAI version exists and `force_masks` is FALSE, activate it.
           if (length(list.files(bbbb, pattern = qai_version)) != 0 & force_masks == F) {
             file.rename(from = paste0(bbbb, 
                                       list.files(bbbb, pattern = qai_version)), 
@@ -429,34 +436,30 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
                                     "CLM", 
                                     substr(list.files(bbbb, pattern = qai_version), 17, 25)))
             
-          } else {
-            
+          } else { # If the desired mask does not exist, create it.
             file.remove(list.files(bbbb, pattern = qai_version, full.names = T), recursive = T)
-            
             if(!fmask_py_only) {
-              
-              # if the desired mask does not exist, then create it
+              # Create the mask from the QAI file. In case of multiple observations on the same day, the first one is selected.
               mask = rast(f[grep(d, f)][1]) # in case of 2 observations on the same day, take the first one (the same is done above, when writing only the first 10 bands)
               mask_out = mask
               
-              # get the integer values that occur in your image (this may not be complete
-              # though and you may have to find a way to include all missing combinations if you want to automatize this)
+              # Extract unique integer values from the QAI mask.
               qai_values = freq(mask)[,2]
               
               qai_bit_values = as.data.frame(qai_values)
               
-              # this is an ugly line of code. However, it should convert the integers in bit "strings"
-              # so that you can interprete them according to the table in the force website
+              # Convert QAI integer values to 16-bit binary strings for interpretation based on FORCE documentation.
               for(qai in 1:nrow(qai_bit_values)) qai_bit_values$bit[qai] = paste(sapply(strsplit(paste(rev(intToBits(qai_bit_values$qai_values[qai]))),""),`[[`,2),collapse="")
               #for(i in 1:nrow(qai_bit_values)) qai_bit_values$bit[i] = substr(paste(sapply(strsplit(paste(rev(intToBits(qai_bit_values$qai_values[i]))),""),`[[`,2),collapse=""), 17, 32)
               # select all where last 4 positions are 0 (https://force-eo.readthedocs.io/en/latest/howto/qai.html?highlight=qai)
               # valid data = 0 / cloud state = 00 / cloud shadow flag = 0 or 1 / snow flag = 0
               
-              # select the numbers with 0000 bit value at the beginning
+              # Select cloud-free pixel values based on specific bit patterns (01000$ or 00000$) as per FORCE QAI documentation.
               qai_bit_values_cloudfree = qai_bit_values[grepl("01000$|00000$", qai_bit_values$bit),] # select here the valid pixel values
               qai_bit_values_cloudfree$bit = substr(qai_bit_values_cloudfree$bit, nchar(qai_bit_values_cloudfree$bit)-15, nchar(qai_bit_values_cloudfree$bit))
               
               ####### illumination state bits ######
+              # If illumination state bits are defined, filter cloud-free pixels based on these bits.
               if(!is.na(i_state_bits)) {
                 qai_bit_values_cloudfree = qai_bit_values_cloudfree[grepl(i_state_bits, substr(qai_bit_values_cloudfree$bit, 4, 5)), ]
               }
@@ -467,7 +470,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
               no_cloud_bit = as.vector(qai_bit_values_cloudfree$qai_values)
               #no_cloud_bit_snow = as.vector(qai_bit_values_cloudfree_snow$qai_values)
               
-              # reclassify QAI layer for clouds and clouds + shadow
+              # Reclassify the QAI layer to mask out clouds and cloud shadows.
               if(length(no_cloud_bit) > 0) mask_out[mask %in% no_cloud_bit] <- 0
               #if(length(no_cloud_bit_snow) > 0) mask_out[mask %in% no_cloud_bit_snow] <- 1
               #mask_out[mask_out > 1] <- 1 # for theia, all pixels with values != from 0 are considered as cloudy
@@ -475,6 +478,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
               
             }
             
+            # If `combine_fmask` is TRUE, combine the generated mask with an external fmask.
             if(combine_fmask == T) {
               fma = list.files(paste0("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/masks/fmask/", g), pattern = d, full.names = T)
               if(!identical(fma, character(0))) {
@@ -483,6 +487,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
               }
             }
             
+            # If `fmask_py_only` is TRUE, process the fmask exclusively through Python.
             if(fmask_py_only == T) {
               fma = list.files(paste0("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/masks/fmask/", g), pattern = d, full.names = T)
               if(!identical(fma, character(0))) {
@@ -493,7 +498,7 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
             }
             
             names(mask) <- "Mask"
-            
+            # Assign a name to the mask layer and write the processed mask to a TIFF file.
             writeRaster(mask_out, paste0(bbbb, qai_version, "_", d, "_CLM_mask.tif"), datatype = "INT2S", overwrite = T)  
             gc()
           }
@@ -511,13 +516,16 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
   
   #break
   
+  # Initiate FORDEAD processing if the BOA output folder exists and the `run.fordead` flag is TRUE.
   if(length(list.files(paste0(out_path, g, "_boa"))) != 0  & run.fordead == T) {
     
+    # Iterate through each vegetation index to generate parameter files and execute the FORDEAD processing.
     for (ii in index.list) {
       
-      # generate parameter file
+      # Initialize a data frame to store parameters for the FORDEAD Python scripts.
       param = data.frame()
       
+      # Populate the parameter data frame with configuration settings for the FORDEAD Python scripts.
       # grid
       param[1,1] = paste0("g =", "'", g, "'")
       
@@ -577,18 +585,19 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       # forest mask file
       param[19,1] = paste0("forest_path= ", "'", forest_mask, "'")
       
+      # Write the generated parameters to a `param.py` file, which will be used by the Python FORDEAD scripts.
       write.table(param, paste0(dirname(fordead_path_1), "/param.py"), quote = F, row.names = F, col.names = F)
       
-      #call fordead
+      # Configure the Python environment for `reticulate`.
       Sys.getenv()
       Sys.setenv(RETICULATE_PYTHON = myenv_bin)
       #use_condaenv(condaenv = "fordead_plain", conda = conda)
       
       print("running p1")
-      # launch the fordead preprocessing
+      # Execute the first FORDEAD Python script for preprocessing.
       system(paste0(myenv_python, " ",fordead_path_1))
       
-      # save the parameter file
+      # Save a copy of the parameter file to the output directory for the current FORDEAD run.
       write.table(param, paste0(for_out_path, "fordead_output_", ii, "_", g, "/param.py"), quote = F, row.names = F, col.names = F)
       
       fordead_time_1 = Sys.time()
@@ -596,22 +605,23 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       print("Time elapsed for 1st fordead script")
       print(mask_time - fordead_time_1)
       
-      ##### compute the dummy mask #####
-      #(necessary for the algorithm to run - sets to valid the mask for 1 date only for those pixels where all observations are masked)
-      # works in combination with a max train date set to the end of the acquisition period only.
+      ##### Compute Dummy Mask for Algorithm Stability #####
+      # This section computes a "dummy mask" which is necessary for the algorithm to run stably.
+      # It sets to valid the mask for a single date for pixels where all observations are otherwise masked.
+      # This works in combination with a maximum training date set to the end of the acquisition period only.
       
-      # get the masks paths and select the first one
+      # Construct the path to the mask files, retrieve them, and then extract their base names and dates.
+      # Only masks within the defined training period are selected for further processing.
       mask_path = paste0(data_fol, "/Mask")
       mask_files = list.files(mask_path, full.names =  T)
-      
-      # work only with the masks during the training period
       bn = basename(mask_files)
       bns = substr(bn, 6, 15)
       #train_dates = bns[as.Date(bns) < train_period_min]
       
-      # import
+      # Import the masks, filtering them to include only those within the training period.
       mask = rast(mask_files[as.Date(bns) <= train_period_max])
       
+      # Import masks specifically for the minimum training period.
       mask_min = rast(mask_files[as.Date(bns) <= train_period_min])
       
       # fill NAs
@@ -620,23 +630,22 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       # mask_filled = ff(mask_filled)
       # mask_filled[is.na(mask)] <- 0
       
+      # Calculate the sum of valid (non-NA) observations for each pixel.
       smask = sum(mask, na.rm = T)
       train_dates_number = abs((nlyr(mask) - smask))
       
-      # get the locations where all observations are masked (==1)
+      # Identify locations where the number of valid observations is below the minimum training data threshold.
       mask_nodata = smask >= (nlyr(mask) - min_train_data) # 5 is the number of min obs
       
-      # facilitate reruns (masks are edited at the first one, needing a rerun)
+      # Facilitate reruns: if `mask_nodata.tif` exists, read it; otherwise, create it along with `valid_obs.tif`.
       if(file.exists(paste0(data_fol, "/mask_nodata.tif"))) {
         print("reading existing mask_nodata.tif file")
         mask_nodata = rast(paste0(data_fol, "/mask_nodata.tif"))
-      } else {
+      } else { # If `mask_nodata.tif` does not exist, create and write it along with `valid_obs.tif`.
         print("writing mask_nodata.tif file")
         writeRaster(train_dates_number , paste0(data_fol, "/valid_obs.tif"), overwrite = overwrite)
         writeRaster(mask_nodata, paste0(data_fol, "/mask_nodata.tif"), overwrite = overwrite)
-        # edit the mask for the first date and overwrite it
-        # in combination with lowered min obs seems to solve the singular matrix error.
-        
+        # Edit the mask for the first date and overwrite it. This helps resolve singular matrix errors.
         for(i in mask_files[1:min_train_data]) {
           mask_1 = i
           edited_mask = rast(mask_1)
@@ -649,16 +658,18 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       # run the second part of fordead
       #
       
+      # Check if the coefficient model file exists to determine whether to fill holes in the data.
       fill = !file.exists(paste0(data_fol, "/DataModel/coeff_model.tif"))
       
       print("running p2")
+      # Execute the second FORDEAD Python script.
       system(paste0(myenv_python, " ", fordead_path_2))
       
       # mask out fromt the model the areas that do not match the min number of observations during the max training period (with the file previously generated)
       
       coeff = rast(paste0(data_fol, "/DataModel/coeff_model.tif"))
       
-      # fill holes
+      # If `fill` is TRUE, fill holes in the `coeff` raster using a median filter.
       if(fill) {
         w = 3
         
@@ -669,29 +680,29 @@ for(g in grids) { #what is this?? shouldn't it just be tiles?
       }
       
       
+      # Mask out areas from the coefficient model where there are insufficient valid observations.
       coeff[mask_nodata] <- NA
       writeRaster(coeff, paste0(data_fol, "/DataModel/coeff_model.tif"), overwrite)
+      # Write the processed coefficient model to a TIFF file.
+      # Load the sufficient coverage mask and then mask out areas with insufficient valid observations.
       scm = rast(paste0(data_fol, "/TimelessMasks/sufficient_coverage_mask.tif"))
       scm[mask_nodata] <- NA
       writeRaster(scm, paste0(data_fol, "/TimelessMasks/sufficient_coverage_mask.tif"), overwrite)
       
       print("running p3")
+      # Execute the third FORDEAD Python script.
       system(paste0(myenv_python, " ", fordead_path_3))
       
-      gc()
+      gc() # Perform garbage collection to free up memory after processing each vegetation index.
     }
   }
-  ########
-  gc()
+  gc() # Perform garbage collection to free up memory after processing each grid.
 }
-# 
-# # plots
+# Section for generating plots and potentially executing a fourth FORDEAD Python script.
+# TODO: Implement a loop to iterate through indices for plotting, similar to the main processing loop.
 # fordead_path_4 = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs/fordead_4_fix.py"
-# # 
 # system(paste0(myenv_python, " ", fordead_path_4))
 # system(paste0(myenv_python, " ", "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs/fordead_4_fix.py"))
-# 
-# should probably loop through indices
 
 
 

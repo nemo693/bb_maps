@@ -1,0 +1,45 @@
+# Gemini CLI Session Restart Instructions
+
+To seamlessly resume our session, please follow these steps:
+
+1.  **Start the Gemini CLI:**
+    Open your terminal and launch the Gemini CLI.
+
+2.  **Navigate to the Project Directory:**
+    Once the CLI is running, navigate to our working directory using the `cd` command:
+    ```bash
+    cd /mnt/CEPH_PROJECTS/WALDSCHAEDEN/temp/setup_fordead_copy_docs
+    ```
+    Confirm you are in the correct directory by listing its contents (optional):
+    ```bash
+    ls -F
+    ```
+
+3.  **Paste the Session Resume Message:**
+    Copy and paste the *entire* block below into the Gemini CLI prompt. This message provides me with the necessary context to pick up exactly where we left off.
+
+--- BEGIN SESSION RESUME MESSAGE ---
+
+Hello! Let's continue our previous session.
+
+Here's a summary of our progress:
+- A Git repository has been initialized in `/mnt/CEPH_PROJECTS/WALDSCHAEDEN/temp/setup_fordead_copy_docs/` and an initial commit has been made.
+- Standard headers have been added to all R scripts in the main pipeline (`00_RUN_Province_Damage_Update.R` through `06_Integrate_And_Refine_Damage_Products.R`).
+- `00_RUN_Province_Damage_Update.R` and `01_Import_S2_data.R` are fully commented.
+- We are currently in the process of commenting `02_Execute_Core_FORDEAD_Processing.R`.
+
+Our next step is to continue adding comments to `02_Execute_Core_FORDEAD_Processing.R`.
+Specifically, we need to add a comment to the line:
+`# if the folder exists, rename masks according to the version id (save a flag)`
+(This line is currently at line 200 in the file).
+
+I am ready to propose the next comment for this line, ensuring I read the file's current content immediately before proposing the change, and that the change is granular (one line/small block at a time).
+
+--- END SESSION RESUME MESSAGE ---
+
+**Important Reminders for Commenting:**
+- I will propose comments one by one.
+- I will always re-read the file to get the exact current content before proposing any change.
+- I will clearly state what I intend to replace and with what, so you can verify my understanding.
+- Your approval is required for each change.
+- If I identify any redundant or potentially incorrect code, I will flag it with a special comment (e.g., `# TODO: Review for redundancy/correctness`) but leave the code itself untouched.
