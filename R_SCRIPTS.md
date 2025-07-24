@@ -7,46 +7,48 @@
         -   Hardcoded paths to previous yearly/monthly shapefiles for area comparison.
     -   **Outputs:**
         -   Backed-up previous run files.
-        -   Final yearly and monthly damage GeoTIFFs and Shapefiles (via `gdaladdo` and `scp` commands).
+        -   Final yearly and monthly damage GeoTIFFs and Shapefiles (output of the full pipeline).
+        -   Refined rasters (application of `gdaladdo`)
+        -   Copy of the new maps to the server (`scp` commands).
     -   **Key Actions:**
         -   Sets `setwd()`.
-        -   Defines `update_name` and `outfold`.
+        -   Defines `update_name` and `outfold` (where the final products are saved).
         -   Moves files from `fordead_15` to a backup directory.
         -   Sources `01_Import_S2_data.R`, `03_Mosaic_FORDEAD_Outputs.R`, `04_Refine_And_Mask_Damage_Products.R`, `05_Style_And_Project_Damage_Maps.R`, `06_Integrate_And_Refine_Damage_Products.R`.
         -   Executes `gdaladdo` commands.
-        -   Provides `scp` commands for file transfer.
-        -   Performs area comparisons using `terra::vect` and `expanse`.
+        -   Provides `scp` commands for file transfer (to execute manually in a terminal).
+        -   Optionally allows a simple area comparisons.
 -   **`01_Import_S2_data.R`**
-    -   **Purpose:** Manages the acquisition and organization of Sentinel-2 BOA imagery for processing. It defines spatial grids and temporal parameters, and iterates through them, calling `02_Execute_Core_FORDEAD_Processing.R` for each grid and detection period.
+    -   **Level of interaction:** None. 
+    -   **Purpose:** This script sets key parameters for the following steps, and triggers the next script. It defines the FORCE tiles to be analyzed and the temporal parameters. It calls `02_Execute_Core_FORDEAD_Processing.R`, which performs the following steps and calls fordead.
     -   **Inputs:**
         -   Configuration parameters (`get_new_images`, `sentinel_only`).
-        -   Spatial grid definitions (`grids`).
+        -   Selection of FORCE tiles for which the analysis will be performed (`grids`).
         -   Temporal parameters (`train_period_max`, `detection_start_dates`, `detection_end_dates`, `ignored_doy`).
+        -   Paths are set (e.g. forest mask, fodead output and input directories)
     -   **Outputs:**
-        -   Organized BOA imagery in `_boa` and `_update` directories for each grid.
+        -   None.
     -   **Key Actions:**
         -   Defines global parameters for the FORDEAD process.
-        -   Loops through defined `detection_start_dates` and `detection_end_dates`.
-        -   For each grid, manages BOA image files, moving "future" images to an `_update` directory and restoring "past" images to the main `_boa` directory.
         -   Sources `02_Execute_Core_FORDEAD_Processing.R` within its main loop.
 -   **`02_Execute_Core_FORDEAD_Processing.R`**
-    -   **Purpose:** This script is the bridge between the R orchestration and the Python FORDEAD core. It handles initial data preprocessing, QAI mask generation (in R), and prepares and executes the Python FORDEAD scripts for each grid cell and vegetation index.
+    -   **Level of interaction:** None. 
+    -   **Purpose:** This script is the bridge between the R orchestration and the Python FORDEAD core. It handles initial data preprocessing (import and explosion of S2 data), QAI mask generation (converting FORCE QAI bit layers to masks), and executes the Python FORDEAD scripts for each grid cell and vegetation index.
     -   **Inputs:**
         -   Parameters from `01_Import_S2_data.R` (e.g., `grids`, `train_period_min`, `train_period_max`, `ignored_doy`).
-        -   Raw Sentinel-2 BOA and QAI TIFFs from `in_path`.
-        -   Forest mask shapefile (`forest_mask`).
+        -   Raw Sentinel-2 BOA and QAI TIFFs from `in_path` (FORCE level2 folder). 
     -   **Outputs:**
-        -   Organized BOA data and generated QAI masks in `_boa` directories.
-        -   Parameter files (`param.py`) for Python scripts.
-        -   Intermediate mask files (`mask_nodata.tif`, `valid_obs.tif`).
-        -   Outputs from Python FORDEAD scripts (e.g., `coeff_model.tif`, `sufficient_coverage_mask.tif`).
+        -   Exploded BOA data (bandwise),  QAI masks in `_boa` directories.
+        -   Parameter file (`param.py`) for Python scripts.
+        -   Fordead outputs (see fordead docs https://fordead.gitlab.io/fordead_package/).
     -   **Key Actions:**
         -   Defines numerous settings for the FORDEAD process (paths, thresholds, indices).
         -   Manages the `qai_version` and generates/activates QAI masks based on Sentinel-2 QAI data.
         -   Prepares a `param.py` file with various parameters for the Python scripts.
         -   Calls external Python wrapper scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) using `system()` calls.
-        -   Performs a "dummy mask" computation to ensure algorithm stability.
+        -   Performs a "dummy mask" computation to ensure algorithm stability (avoid empty subtiles during model                  coefficient computation) - mandatory bug fix.
 -   **`03_Mosaic_FORDEAD_Outputs.R`**
+    -   **Level of interaction:** None.
     -   **Purpose:** Mosaics the tiled outputs (both raster and vector) generated by the FORDEAD process for each vegetation index into full-area maps.
     -   **Inputs:**
         -   Tiled FORDEAD outputs (e.g., `confidence_index.tif`, `dieback.shp`, `stress_periods.shp`, `mask_nodata.tif`, `valid_obs.tif`, `first_date_dieback.tif`, etc.) from `for_out_path`.
@@ -58,6 +60,7 @@
         -   Identifies and merges corresponding tiled vector files using `terra::vect` and `rbind`.
         -   Identifies and merges corresponding tiled raster files using `terra::vrt` and `writeRaster`.
 -   **`04_Refine_And_Mask_Damage_Products.R`**
+    -   **Level of interaction:** None. 
     -   **Purpose:** Refines the merged outputs by applying additional masking, adjusting temporal periods, and deriving annual products. It also performs area calculations and comparisons.
     -   **Inputs:**
         -   Merged NDVI and NDWI shapefiles (e.g., `output_NDWI_merged.shp`, `output_NDVI_merged.shp`) from `fold` (which is `for_out_path`).
@@ -76,6 +79,7 @@
         -   Derives annual damage products.
         -   Calculates and compares damage areas with a reference dataset.
 -   **`05_Style_And_Project_Damage_Maps.R`**
+    - 
     -   **Purpose:** Prepares the yearly and monthly damage products for final output and visualization by applying color palettes, projecting data, and converting formats.
     -   **Inputs:**
         -   Yearly and monthly damage rasters (e.g., `NDVI_merged_masked_with_NDWI_province_only_annual.tif`, `NDVI_merged_masked_with_NDWI_province_lafis.tif`) from `prod_fol` (which is `for_out_path`).
