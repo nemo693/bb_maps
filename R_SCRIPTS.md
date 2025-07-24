@@ -7,15 +7,17 @@
         -   Hardcoded paths to previous yearly/monthly shapefiles for area comparison.
     -   **Outputs:**
         -   Backed-up previous run files.
-        -   Final yearly and monthly damage GeoTIFFs and Shapefiles (via `gdaladdo` and `scp` commands).
+        -   Final yearly and monthly damage GeoTIFFs and Shapefiles (output of the full pipeline).
+        -   Refined rasters (application of `gdaladdo`)
+        -   Copy of the new maps to the server (`scp` commands).
     -   **Key Actions:**
         -   Sets `setwd()`.
-        -   Defines `update_name` and `outfold`.
+        -   Defines `update_name` and `outfold` (where the final products are saved).
         -   Moves files from `fordead_15` to a backup directory.
         -   Sources `01_Import_S2_data.R`, `03_Mosaic_FORDEAD_Outputs.R`, `04_Refine_And_Mask_Damage_Products.R`, `05_Style_And_Project_Damage_Maps.R`, `06_Integrate_And_Refine_Damage_Products.R`.
         -   Executes `gdaladdo` commands.
-        -   Provides `scp` commands for file transfer.
-        -   Performs area comparisons using `terra::vect` and `expanse`.
+        -   Provides `scp` commands for file transfer (to execute manually in a terminal).
+        -   Optionally allows a simple area comparisons.
 -   **`01_Import_S2_data.R`**
     -   **Purpose:** Manages the acquisition and organization of Sentinel-2 BOA imagery for processing. It defines spatial grids and temporal parameters, and iterates through them, calling `02_Execute_Core_FORDEAD_Processing.R` for each grid and detection period.
     -   **Inputs:**
