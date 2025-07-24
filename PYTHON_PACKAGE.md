@@ -1,8 +1,8 @@
-### Python Package (`fordead_plain`)
+### Python Package (`fordead_plain`) and Wrapper Scripts
 
-The `fordead_plain` package contains the core logic for the damage detection. The R scripts call specific modules within this package.
+The `fordead_plain` package contains the core logic for the damage detection. The R scripts call wrapper scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) which in turn execute the corresponding steps from the `fordead_plain` package.
 
--   **`fordead_plain/steps/step1_compute_masked_vegetationindex.py`**
+-   **`fordead_1.py` (Wrapper for `step1_compute_masked_vegetationindex.py`)**
     -   **Purpose:** Computes masks and masked vegetation indices for each Sentinel date, filtering by cloudiness and applying source/soil/user-defined masks.
     -   **Inputs:**
         -   Sentinel-2 data directory.
@@ -22,7 +22,7 @@ The `fordead_plain` package contains the core logic for the damage detection. Th
         -   Computes and applies various masks (source, soil, user-defined).
         -   Writes vegetation index and mask outputs.
         -   Saves `TileInfo` object.
--   **`fordead_plain/steps/step2_train_model.py`**
+-   **`fordead_2.py` (Wrapper for `step2_train_model.py`)**
     -   **Purpose:** Uses Sentinel dates to train a periodic vegetation index model capable of predicting the vegetation index at any date.
     -   **Inputs:**
         -   Data directory (containing vegetation indices and masks from Step 1).
@@ -44,7 +44,7 @@ The `fordead_plain` package contains the core logic for the damage detection. Th
         -   Models the vegetation index.
         -   Writes model outputs.
         -   Saves `TileInfo` object.
--   **`fordead_plain/steps/step3_dieback_detection.py`**
+-   **`fordead_3.py` (Wrapper for `step3_dieback_detection.py`)**
     -   **Purpose:** Detects anomalies by comparing the vegetation index with its model prediction. Identifies pixels suffering from dieback based on successive anomalies and saves information on stress periods.
     -   **Inputs:**
         -   Data directory (containing model outputs from Step 2).

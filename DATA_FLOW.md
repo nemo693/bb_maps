@@ -8,7 +8,7 @@ The data flows through the application in a sequential manner:
     -   Reads organized BOA and QAI data.
     -   Generates R-based QAI masks.
     -   Passes parameters to Python scripts via `param.py`.
-    -   Python scripts (Step 1, 2, 3) process data, generating:
+    -   Python wrapper scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) process data, generating:
         -   Vegetation indices and masks (`fordead_output_*/VegetationIndex`, `fordead_output_*/Mask`).
         -   Model coefficients (`fordead_output_*/DataModel/coeff_model.tif`).
         -   Anomaly, dieback, and stress data (`fordead_output_*/DataAnomalies`, `fordead_output_*/DataDieback`, `fordead_output_*/DataStress`).
@@ -33,9 +33,12 @@ graph TD
     end
 
     subgraph "Python Core (fordead_plain)"
-        D -- calls --> Py1["fordead_1.py (step1)"];
-        D -- calls --> Py2["fordead_2.py (step2)"];
-        D -- calls --> Py3["fordead_3.py (step3)"];
+        D -- calls --> Py1["fordead_1.py (wrapper)"];
+        Py1 -- executes --> Step1["step1_compute_masked_vegetationindex.py"];
+        D -- calls --> Py2["fordead_2.py (wrapper)"];
+        Py2 -- executes --> Step2["step2_train_model.py"];
+        D -- calls --> Py3["fordead_3.py (wrapper)"];
+        Py3 -- executes --> Step3["step3_dieback_detection.py"];
     end
 
     subgraph "Inputs"

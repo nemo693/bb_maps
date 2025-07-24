@@ -2,7 +2,7 @@
 
 During the analysis, several inconsistencies and areas for improvement were noted:
 
--   **Python Script Locations:** The R script `02_Execute_Core_FORDEAD_Processing.R` refers to Python scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) located in an external directory (`/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs`). However, the core logic appears to reside in `fordead_plain/steps/stepX_*.py` within the provided directory structure. Without access to the external directory, it is unclear if the called scripts are wrappers around the `fordead_plain` package or contain separate logic. This should be clarified to ensure the documentation accurately reflects the executed code.
+-   **Python Script Discrepancy:** The R script `02_Execute_Core_FORDEAD_Processing.R` refers to Python scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) located in an external directory (`/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs`). These are wrapper scripts that call the core logic in `fordead_plain/steps/stepX_*.py`. This adds a layer of indirection that could be simplified.
 
 -   **Hardcoded Paths:** This is a pervasive issue across multiple R scripts (`04_Refine_And_Mask_Damage_Products.R`, `05_Style_And_Project_Damage_Maps.R`, `06_Integrate_And_Refine_Damage_Products.R`). Many input and output file paths are hardcoded, making the pipeline inflexible and difficult to manage if the directory structure or data sources change. Examples include:
 
