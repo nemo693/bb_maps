@@ -1,18 +1,17 @@
-
 # ------------------------------------------------------------------------------
+# Level of interaction: every run.
+#               - update path to previous outputs (used to fix past detections).
+#               - 
+#
 # Script:       06_Integrate_And_Refine_Damage_Products.R
 # Purpose:      Performs the final post-processing steps, integrating previous results,
 #               applying additional filters (stress periods, shadows, single pixels),
 #               and generating the definitive output products.
-# Date:         (Original Date from script, if available)
 #
 # Inputs:
-#   - Current yearly and monthly damage rasters (from `05_Style_And_Project_Damage_Maps.R`).
-#   - Previous monthly and yearly damage rasters (hardcoded paths in the script).
-#   - NDVI and NDWI stress period rasters (e.g., `/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDVI_merged.tif`).
-#   - QAI data for shadow masking (hardcoded path: `/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/level2_misc/level2_tiles/T32TPT/20241103_LEVEL2_SEN2A_QAI.tif`).
-#   - Forest inspectorates shapefile (`/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_administration/forest_inspectorates/ForestInspectorates_polygon.shp`).
-#   - A base raster for projection (hardcoded path: `/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/LANDSAT_MOSAIC_4BANDS_CENTER/final/SENTINEL2_MOSAIC_19840601_19900930_19870715_7C_CIR.tif`).
+#   - Yearly and monthly damage rasters (from `05_Style_And_Project_Damage_Maps.R`).
+#   - Monthly and yearly damage rasters from previous updates (hardcoded paths in the script).
+#   - NDVI and NDWI stress period rasters (optional).
 #
 # Outputs:
 #   - Final yearly and monthly damage GeoTIFFs and Shapefiles (e.g., `changes_monthly_damages_july_2025_25832_final.tif`).
@@ -52,32 +51,16 @@ library(terra)
 # CONFIGURATION AND INPUT LOADING
 # ==============================================================================
 
-# Load base raster
-
-### CHECK IN THE OTHER SCRITPS AS THIS LINE IS WRONG AND IT WAS COPIED FROM SOMEWHERE ELSE
-# FLAG: Hardcoded path. Consider making this configurable.
-base = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/LANDSAT_MOSAIC_4BANDS_CENTER/final/SENTINEL2_MOSAIC_19840601_19900930_19870715_7C_CIR.tif")[[1]]
-
+# TO UPDATE # first run of the year: year in the name
 # Load current detection results
-# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832.tif"))
 yearly = yearly_original
-# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832.tif"))
 
+# TO UPDATE # previous run (or run from which you want to fix previous detections)
 # Load previous detection results for integration
-# FLAG: Hardcoded paths. Consider making these configurable or deriving them dynamically.
-old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") # The latest update that was delivered (using this pipeline). should run at regular intervals and come up with a rule here
+old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") 
 old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_yearly_damages_june_2025_25832_final.tif")
-
-# Initial frequency check
-cat("Initial frequencies:\n")
-print("Old monthly:")
-print(freq(old_monthly))
-print("Current monthly:")
-print(freq(monthly))
-print("Current yearly:")
-print(freq(yearly))
 
 
 # glpat-pvyAi7X6uQqG5yf2_85b
