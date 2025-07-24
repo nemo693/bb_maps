@@ -1,9 +1,12 @@
 # Set the working directory for the script. This ensures all relative paths are resolved correctly.
+# FLAG: The working directory is hardcoded. Consider making this configurable.
 setwd("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Scripts_fordead_forest_service/")
 
 # Define the name for the current update, typically representing the month.
+# FLAG: The update name is hardcoded. This should be dynamic.
 update_name = "july" 
 # Define the base output folder for the final products of this run.
+# FLAG: The output folder is hardcoded. This should be dynamic.
 outfold <- "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_01_07_2025/" 
 
 # Before starting, manually make a copy of the folder "fordead_15", just in case something went wrong with the update (~55 mins)
@@ -47,6 +50,7 @@ source("06_Integrate_And_Refine_Damage_Products.R") # Integrates historical data
 # This improves rendering performance in GIS applications.
 # `raster_filename_month` and `raster_filename_year` are expected to be defined
 # in the last sourced script (06_Integrate_And_Refine_Damage_Products.R).
+# FLAG: `gdaladdo` is called via `system()`. This creates a dependency on the system's GDAL installation.
 system(paste0('gdaladdo -r mode ', raster_filename_month, ' 2 4 8 16 32'))
 system(paste0('gdaladdo -r mode ', raster_filename_year, ' 2 4 8 16 32'))
 
@@ -54,6 +58,7 @@ system(paste0('gdaladdo -r mode ', raster_filename_year, ' 2 4 8 16 32'))
 # These commands are provided for manual execution to upload the final products
 # to a remote server using SCP (Secure Copy Protocol).
 # The password for 'eo_forest' user is required.
+# FLAG: Hardcoded credentials and server address. This is a security risk and should be handled through a secure mechanism.
 paste0("scp ", raster_filename_year," eo_forest@193.106.181.22:changes_yearly_damages_latest.tif")
 #password: AqyowLyoNkqRGMTmJK8Z
 paste0("scp ", raster_filename_month," eo_forest@193.106.181.22:changes_monthly_damages_latest.tif")

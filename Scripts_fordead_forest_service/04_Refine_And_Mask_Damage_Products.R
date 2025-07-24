@@ -43,6 +43,7 @@ library(terra)
 #fold = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15"
 fold = for_out_path # Set the working folder to the output path from previous steps.
 
+# FLAG: Hardcoded paths. Consider making these configurable.
 province = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_administration/forest_inspectorates/ForestInspectorates_polygon.shp") # Load the province boundaries shapefile.
 lafis = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/land_cover/LAFIS_20210413/AGRI_MEASURES_20210413154430_polygon.shp") # Load the LAFIS (agricultural measures) shapefile.
 lafis_nf = lafis[!grepl("FO|AL1|AL2|AL3|AL4|AL5|AL6|AL7|AL8|AL9|ANA|PA2|PA3", lafis$CODE),] # Filter out specific agricultural measures from the LAFIS data.
@@ -50,7 +51,7 @@ lafis_nf = lafis[!grepl("FO|AL1|AL2|AL3|AL4|AL5|AL6|AL7|AL8|AL9|ANA|PA2|PA3", la
 overwrite = T
 
 ######## get last detection date
-
+# FLAG: Hardcoded path to a specific grid. This will fail if the grid is not present.
 images = list.files(paste0(fold, "/fordead_output_NDWI_X0001_Y0004/VegetationIndex")) # List all image files from a specific NDWI output directory to extract dates.
 
 dates = substr(images, 17, 26) # Extract date strings from the image filenames.
@@ -77,6 +78,7 @@ indx = sapply(ndwi$period, FUN = fun) # Apply the function to find the index for
 
 ndwi$p = indx # Assign the period indices to the NDWI data.
 
+# FLAG: Hardcoded path. Consider making this configurable.
 base = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/SENTINEL2_MOSAIC_4BANDS_LAST/final/SENTINEL2_MOSAIC_20220601_20220930_7L_COUNT.tif")
 
 ndwi_rast= rasterize(ndwi, base, field = "p") # Rasterize the NDWI vector data using the base raster and period indices.
@@ -101,6 +103,7 @@ indx = sapply(ndvi$period, FUN = fun) # Apply the function to find the index for
 
 ndvi$p = indx # Assign the period indices to the NDVI data.
 
+# FLAG: Hardcoded path. Consider making this configurable.
 base = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/SENTINEL2_MOSAIC_4BANDS_LAST/final/SENTINEL2_MOSAIC_20220601_20220930_7L_COUNT.tif")
 
 ndvi_rast= rasterize(ndvi, base, field = "p") # Rasterize the NDVI vector data using the base raster and period indices. # Rasterize the NDVI vector data using the base raster and period indices. # Rasterize the NDVI vector data using the base raster and period indices. # Rasterize the NDVI vector data using the base raster and period indices.
@@ -115,6 +118,7 @@ ndvi_masked = as.polygons(ndvi_rast_masked, values = T)
 
 ndvi_masked$first_anomaly = p[ndvi_masked$p]
 
+# FLAG: Fragile date/naming logic. These hardcoded adjustments for specific months suggest potential issues with date handling.
 # fix november
 november = ndvi_masked[grep("11-", ndvi_masked$first_anomaly),]$first_anomaly # Extract November periods from the masked NDVI data.
 november_updated = paste0(substr(november, 1, 21), "15") # Update the November period to a specific date (15th of the month).
@@ -162,6 +166,7 @@ writeRaster(
 
 ndvi_masked_annual = ndvi_masked
 # Convert monthly/period-based first_anomaly dates to annual labels for yearly product generation.
+# FLAG: Fragile logic. Hardcoded year values will require manual updates.
 ndvi_masked_annual$first_anomaly[grep("2019", ndvi_masked_annual$first_anomaly)] <- "2019"
 ndvi_masked_annual$first_anomaly[grep("2020", ndvi_masked_annual$first_anomaly)] <- "2020"
 ndvi_masked_annual$first_anomaly[grep("2021", ndvi_masked_annual$first_anomaly)] <- "2021"
@@ -181,7 +186,7 @@ writeRaster(
 ) # Write the rasterized annual masked NDVI data to a TIFF file.
 
 ###
-
+# FLAG: Hardcoded path. Consider making this configurable.
 ch_p = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_impacts/bark_beetle_damages/damages_full_province/bark_beetle_damages_province.shp") # Load the reference bark beetle damages shapefile.
 #ch_p = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_impacts/bark_beetle_damages/damages_full_province/bark_beetle_damages_province_annual.shp")
 ch = ndvi_masked # Assign the masked NDVI data to a new variable for area calculations.

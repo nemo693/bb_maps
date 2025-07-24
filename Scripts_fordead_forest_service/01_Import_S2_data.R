@@ -30,11 +30,13 @@ get_new_images <- TRUE
 sentinel_only <- TRUE     
 
 # Output directory for analysis results (example commented out).
+# FLAG: Hardcoded path. Consider making this configurable.
 # for_out_path_base <- "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_30_b/"
 
 # --- Analysis Grid Definition ---
 # Define spatial grid cells for processing. Each element represents a unique grid ID (X,Y coordinates).
 # These grid IDs are used to organize and process data for specific geographic areas.
+# FLAG: Hardcoded grid definitions. Consider moving this to a configuration file.
 grids <- c(
   "X0000_Y0003", "X0000_Y0004", "X0000_Y0005",
   "X0001_Y0003", "X0001_Y0004", "X0001_Y0005", 
@@ -46,16 +48,20 @@ grids <- c(
 
 # --- Temporal Parameters ---
 # Defines the end date of the training period, used to establish baseline forest conditions.
+# FLAG: Hardcoded temporal parameter. Consider moving to a configuration file.
 train_period_max <- "2022-11-30"  
 
 # Defines the start dates for each damage detection period.
+# FLAG: Hardcoded temporal parameter. Consider moving to a configuration file.
 detection_start_dates <- c("2019-12-31")  
 # Defines the end dates for each damage detection period. This also influences which images are imported.
 # Images after this date are still used for reverting detections, if available.
+# FLAG: Hardcoded temporal parameter. Consider moving to a configuration file.
 detection_end_dates <- c("2025-12-31")    
 
 # Optional: Exclude specific periods when NDVI is naturally low.
 # This prevents false detections/reversions during seasonal low-vegetation periods.
+# FLAG: Hardcoded temporal parameter. Consider moving to a configuration file.
 ignored_doy <- '["11-15","04-15"]'  
 
 
@@ -87,6 +93,7 @@ for (period_idx in seq_along(detection_start_dates)) {
     # Define directory paths for the current grid's BOA data.
     # `update_dir` is used to temporarily store images that are outside the current detection period.
     # `main_boa_dir` is the primary directory for BOA data relevant to the current detection period.
+    # FLAG: Hardcoded paths. Consider making this configurable.
     update_dir <- paste0("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead/", 
                          grid_id, "_boa_update/")
     main_boa_dir <- paste0("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead/", 

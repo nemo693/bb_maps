@@ -40,6 +40,8 @@ for (i in index.list) {
   # List output directories for the current vegetation index.
   dirs.out = list.dirs(for_out_path, full.names = T, recursive = F)
   dirs.out = dirs.out[grep(paste0("^fordead_output_", i), basename(dirs.out))]
+  # FLAG: Fragile logic. Filtering directories based on a hardcoded character length (98) is not robust.
+  # This will break if the path length changes.
   dirs.out = dirs.out[nchar(dirs.out) == 98] # Filter directories based on character length to select specific output folders. This value (98) may need adjustment if the `for_out_path` name changes or if running in a subfolder.
   
   conf.res.die = list.files(dirs.out, recursive = T, pattern = "confidence_index.tif", full.names = T)

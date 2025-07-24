@@ -38,7 +38,7 @@
 # CONFIRMATION FUNCTION
 # =============================================================================
 confirm_write <- function(filename) {
-  response <- readline(prompt = paste("Do you want to write or overwrite", filename, "? (yes/no): "))
+  response <- readline(prompt = paste("Do you want to write or overwrite", filename, "? (yes/no):"))
   tolower(response) == "yes"
 }
 
@@ -55,14 +55,18 @@ library(terra)
 # Load base raster
 
 ### CHECK IN THE OTHER SCRITPS AS THIS LINE IS WRONG AND IT WAS COPIED FROM SOMEWHERE ELSE
+# FLAG: Hardcoded path. Consider making this configurable.
 base = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/MOSAICS/LANDSAT_MOSAIC_4BANDS_CENTER/final/SENTINEL2_MOSAIC_19840601_19900930_19870715_7C_CIR.tif")[[1]]
 
 # Load current detection results
+# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832.tif"))
 yearly = yearly_original
+# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832.tif"))
 
 # Load previous detection results for integration
+# FLAG: Hardcoded paths. Consider making these configurable or deriving them dynamically.
 old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") # The latest update that was delivered (using this pipeline). should run at regular intervals and come up with a rule here
 old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_yearly_damages_june_2025_25832_final.tif")
 
@@ -121,6 +125,7 @@ freq(yearly)
 cat("\n=== Applying stress period filtering ===\n")
 
 # Load stress period masks
+# FLAG: Hardcoded paths. Consider making these configurable.
 ndvi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDVI_merged.tif")
 ndwi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDWI_merged.tif")
 
@@ -158,6 +163,8 @@ if (confirm_write(paste0(outfold, prefix, "_yearly_stress.tif"))) {
 cat("\n=== Applying shadow masking ===\n")
 
 # Load QAI (Quality Assessment Index) data
+# FLAG: Hardcoded path to a specific tile and date. This is not a robust solution.
+# FLAG: Redundant logic. QAI processing is also present in `02_Execute_Core_FORDEAD_Processing.R`.
 qai = rast("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/level2_misc/level2_tiles/T32TPT/20241103_LEVEL2_SEN2A_QAI.tif")
 mask_out = qai
 
@@ -187,6 +194,7 @@ no_cloud_bit = as.vector(qai_bit_values_cloudfree$qai_values)
 if(length(no_cloud_bit) > 0) mask_out[mask_out %in% no_cloud_bit] <- 0
 
 # Load forest inspectorate boundaries and filter for Vipiteno
+# FLAG: Hardcoded path. Consider making this configurable.
 i = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_administration/forest_inspectorates/ForestInspectorates_polygon.shp")
 i = i[i$NAME_IT == "Vipiteno",]
 
@@ -275,6 +283,7 @@ print(freq(yearly_final))
 cat("\n=== Saving final outputs ===\n")
 
 # Define output filenames
+# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 raster_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.tif")
 raster_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832_final.tif")
 vector_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.shp")

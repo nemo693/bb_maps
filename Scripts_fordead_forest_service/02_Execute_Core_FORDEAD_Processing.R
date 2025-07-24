@@ -46,12 +46,15 @@ combine_fmask = F     # Flag to enable/disable combining with fmask (external ma
 fmask_py_only = F     # Flag to enable/disable fmask processing only via Python.
 
 # Conda environment and Python executable paths for `reticulate`.
+# FLAG: Hardcoded paths. Consider making this configurable.
 conda = "/opt/conda/bin/conda"
 myenv_python = "/opt/conda/envs/fordead_plain/bin/python "
 myenv_bin = "/opt/conda/envs/fordead_plain/bin"
 
 # path to the level2 coreg tif folder which contains the boa and qai files
+# FLAG: Hardcoded path. Consider making this configurable.
 in_path = "/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/level2/" 
+# FLAG: Hardcoded path. Consider making this configurable.
 forest_mask = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/land_cover/forest_map/forest_mask/forest_mask_sarah_2019_mmu_1000m.shp"
 # Forest mask options (choose appropriate mask file)
 # Option 1: Sarah's 2019 forest mask with 1000 sqm mmu
@@ -61,10 +64,12 @@ forest_mask = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/land_cover/forest_map/forest_
 
 
 # output path
+# FLAG: Hardcoded paths. Consider making this configurable.
 out_path = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead/" # where the boa data will be stored
 for_out_path = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/" # where the analyses output will be stored / path of the analysis to update
 
 # path of the fordead_git folder
+# FLAG: Hardcoded path. Consider making this configurable.
 script_path = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs" # path where the scripts are located
 
 # paths of the fordead scripts - derive from previous
@@ -77,32 +82,32 @@ fordead_path_3 = paste0(script_path, "/fordead_3.py")#
 
 
 # threshold of anomaly, 0.16 default
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 thr_anomaly = 0.16 # 
 
 # custom formula for additional local masking
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 formula = "(B2 > 600) | (B3 <= 0) | (B4 <=0) | (B4 > 1000)| (((B8-B4)/(B8+B4)) > 1) | (((B8-B4)/(B8+B4)) < -1)"
 #formula = "(((B8-B4)/(B8+B4)) > 1) | (((B8-B4)/(B8+B4)) < -1) | (((B8A-B11)/(B8A+B11)) > 1) | (((B8A-B11)/(B8A+B11)) < -1)"
 
 # minimum number of training observations (overrides the parameter of fordead?)
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 min_train_data = 30
 
 
 # AOI (does not seem to work)
-
+# FLAG: Hardcoded path. Consider making this configurable.
 area = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/boundaries/province/province_from_forest_inspectorates_b1000_32632.shp"
 
 
 # Training period
-
+# FLAG: Hardcoded temporal parameters. Consider moving to a configuration file.
 # train_period_min = "2018-12-31"
 train_period_min = "2019-12-31"
 train_period_max = "2021-11-30"
 
 # indices to be used
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 index.list = c("NDVI", "NDWI")
 #index.list = c("NDVI")
 #index.list = c("NDWI")
@@ -110,17 +115,17 @@ index.list = c("NDVI", "NDWI")
 
 
 # soil detection (not working well with our data - can be tuned to extract soil, but bb detection at the same time is not working fine)
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 soil = "True"
 
 
 # prov mask - UNUSED
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 prov_mask = "True"
 
 
 # detrend - last time I checked it was not working
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 general_trend_det = "False"
 
 
@@ -153,17 +158,17 @@ general_trend_det = "False"
 #grids = c("X0004_Y0005")
 
 # months to be considered (for fetching new data and copying it to the boa folders - only once)
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 months = c("01","02","03","04", "05", "06", "07", "08", "09", "10", "11","12")
 
 
 # how to label the changes (monthly, biweekly, every acquisition)
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 out.freq = "M" # e.g. "sentinel" for all acquisition dates. Other options are e.g.: 'M' (every month), '3M' (every three months), '15D' (every 15 days)"
 
 
 # output a single file for every period? - not working last time I checked
-
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 mult.files = "False"
 
 
@@ -175,6 +180,7 @@ mask_time = Sys.time()
 # qai settings
 
 # QAI VERSION SETTINGS STILL NEED TO BE CHANGED MANUALLY WHEN A NEW VERSION IS ADDED, IN THE MIDDLE OF THE SCRIPT
+# FLAG: Hardcoded parameter. Consider moving to a configuration file.
 qai_version = "scx" # snow cloud shadow (filters for snow and cloud, not cloud cover)
 # THIS NEEDS STORING OF THE INFO AND A DICTIONARY
 
@@ -348,7 +354,7 @@ for(g in grids) {
         # If the BOA output folder exists, this section handles renaming masks according to the version ID.
     # This is part of managing different QAI mask versions and ensuring consistency.
     
-    # TODO: This block of code (listing BOA files, renaming bands, extracting dates) is redundant
+    # FLAG: This block of code (listing BOA files, renaming bands, extracting dates) is redundant
     # as these operations are already performed earlier in the script. Consider refactoring.
     # List original BOA files for the current grid.
     f = list.files(paste0(in_path, g), full.names = T)
@@ -363,6 +369,7 @@ for(g in grids) {
     dates = dates[substr(dates, 5,6) %in% months]
     
     # Read the last QAI mask version used to create masks from a saved RData file.
+    # FLAG: Hardcoded path. Consider making this configurable.
     curr_qai_version = readRDS(paste0(script_path, "/qai_version")) 
     
     print(paste0("current qai version is: ", curr_qai_version)) # Display the currently active QAI version for user information.
@@ -374,6 +381,7 @@ for(g in grids) {
       print("checkpoint 1")
       
       # select the qai files in the source folder - ALSO HERE, THIS IS A DUPLICATE
+      # FLAG: Redundant code. This logic is already present earlier in the script.
       f = list.files(paste0(in_path, g), full.names = T)
       f = f[grep("QAI.tif$", f)]
       f = f[grep("SEN2", f)]
@@ -480,6 +488,7 @@ for(g in grids) {
             
             # If `combine_fmask` is TRUE, combine the generated mask with an external fmask.
             if(combine_fmask == T) {
+              # FLAG: Hardcoded path. Consider making this configurable.
               fma = list.files(paste0("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/masks/fmask/", g), pattern = d, full.names = T)
               if(!identical(fma, character(0))) {
                 fma = rast(fma)
@@ -489,6 +498,7 @@ for(g in grids) {
             
             # If `fmask_py_only` is TRUE, process the fmask exclusively through Python.
             if(fmask_py_only == T) {
+              # FLAG: Hardcoded path. Consider making this configurable.
               fma = list.files(paste0("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/masks/fmask/", g), pattern = d, full.names = T)
               if(!identical(fma, character(0))) {
                 fma = rast(fma)
@@ -595,6 +605,7 @@ for(g in grids) {
       
       print("running p1")
       # Execute the first FORDEAD Python script for preprocessing.
+      # FLAG: `system()` call creates a dependency on the system's Python installation and the `fordead_path_1` script.
       system(paste0(myenv_python, " ",fordead_path_1))
       
       # Save a copy of the parameter file to the output directory for the current FORDEAD run.
@@ -663,6 +674,7 @@ for(g in grids) {
       
       print("running p2")
       # Execute the second FORDEAD Python script.
+      # FLAG: `system()` call creates a dependency on the system's Python installation and the `fordead_path_2` script.
       system(paste0(myenv_python, " ", fordead_path_2))
       
       # mask out fromt the model the areas that do not match the min number of observations during the max training period (with the file previously generated)
@@ -691,6 +703,7 @@ for(g in grids) {
       
       print("running p3")
       # Execute the third FORDEAD Python script.
+      # FLAG: `system()` call creates a dependency on the system's Python installation and the `fordead_path_3` script.
       system(paste0(myenv_python, " ", fordead_path_3))
       
       gc() # Perform garbage collection to free up memory after processing each vegetation index.
@@ -699,7 +712,7 @@ for(g in grids) {
   gc() # Perform garbage collection to free up memory after processing each grid.
 }
 # Section for generating plots and potentially executing a fourth FORDEAD Python script.
-# TODO: Implement a loop to iterate through indices for plotting, similar to the main processing loop.
+# FLAG: Hardcoded path. Consider making this configurable.
 # fordead_path_4 = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs/fordead_4_fix.py"
 # system(paste0(myenv_python, " ", fordead_path_4))
 # system(paste0(myenv_python, " ", "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs/fordead_4_fix.py"))
