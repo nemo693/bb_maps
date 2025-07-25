@@ -1,3 +1,7 @@
+####### BORKIMON POSTPROCESSING HAS THE NEW VERSION; REDO REVISION FROM THERE
+
+
+
 # ------------------------------------------------------------------------------
 # Level of interaction: every run.
 #               - update path to previous outputs (used to fix past detections).
@@ -36,11 +40,14 @@
 # =============================================================================
 # CONFIRMATION FUNCTION
 # =============================================================================
+
+# TO UPDATE # first run of the year: year in the name
+curr_year = 2025
+
 confirm_write <- function(filename) {
   response <- readline(prompt = paste("Do you want to write or overwrite", filename, "? (yes/no):"))
   tolower(response) == "yes"
 }
-
 
 library(terra)
 
@@ -51,11 +58,10 @@ library(terra)
 # CONFIGURATION AND INPUT LOADING
 # ==============================================================================
 
-# TO UPDATE # first run of the year: year in the name
 # Load current detection results
-yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832.tif"))
+yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832.tif"))
 yearly = yearly_original
-monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832.tif"))
+monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832.tif"))
 
 # TO UPDATE # previous run (or run from which you want to fix previous detections)
 # Load previous detection results for integration
@@ -70,6 +76,7 @@ old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/c
 
 cat("\n=== Integrating old detections ===\n")
 
+# TO UPDATE # enter the period until which the detections should be fixed
 # Filter old monthly detections (adjust threshold as needed)
 # Remove values > 36 (was 28 in original script - adjust based on your needs)
 old_monthly_filtered = old_monthly
@@ -125,81 +132,12 @@ mask[!mask] <- NA
 monthly_filtered = mask(monthly, mask, inverse = T)
 yearly_filtered = mask(yearly, monthly_filtered)
 
-cat("Stress filtering results:\n")
-print("Before filtering (rows 30-39):")
-print(freq(monthly)[30:39,])
-print("After filtering (rows 30-39):")
-print(freq(monthly_filtered)[30:39,])
-
 # Save intermediate outputs
 if (confirm_write(paste0(outfold, prefix, "_monthly_stress.tif"))) {
   writeRaster(monthly_filtered, paste0(outfold, prefix, "_monthly_stress.tif"), overwrite=TRUE)
 }
 if (confirm_write(paste0(outfold, prefix, "_yearly_stress.tif"))) {
   writeRaster(yearly_filtered, paste0(outfold, prefix, "_yearly_stress.tif"), overwrite=TRUE)
-}
-
-# =============================================================================
-# SHADOW MASKING (VIPITENO/STERZING AREA)
-# =============================================================================
-
-cat("\n=== Applying shadow masking ===\n")
-
-# Load QAI (Quality Assessment Index) data
-# FLAG: Hardcoded path to a specific tile and date. This is not a robust solution.
-# FLAG: Redundant logic. QAI processing is also present in `02_Execute_Core_FORDEAD_Processing.R`.
-qai = rast("/mnt/CEPH_PROJECTS/sao/SENTINEL-2/SentinelVegetationProducts/FORCE/level2_misc/level2_tiles/T32TPT/20241103_LEVEL2_SEN2A_QAI.tif")
-mask_out = qai
-
-# Process QAI bit values
-qai_values = freq(mask_out)[,2]
-qai_bit_values = as.data.frame(qai_values)
-
-# Convert to binary representation
-for(qai in 1:nrow(qai_bit_values)) {
-  qai_bit_values$bit[qai] = paste(sapply(strsplit(paste(rev(intToBits(qai_bit_values$qai_values[qai]))),""),`[[`,2),collapse="")
-}
-
-# Extract relevant bit positions
-qai_bit_values$bit = substr(qai_bit_values$bit, nchar(qai_bit_values$bit)-15, nchar(qai_bit_values$bit))
-
-# Select cloud-free values (adjust bit pattern as needed)
-qai_sel = grep("11", substr(qai_bit_values$bit, 4,5))
-qai_bit_values_cloudfree = qai_bit_values[qai_sel,]
-
-# Apply illumination state filtering if specified
-if(exists("i_state_bits") && !is.na(i_state_bits)) {
-  qai_bit_values_cloudfree = qai_bit_values_cloudfree[grepl(i_state_bits, substr(qai_bit_values_cloudfree$bit, 4, 5)), ]
-}
-
-# Create cloud-free mask
-no_cloud_bit = as.vector(qai_bit_values_cloudfree$qai_values)
-if(length(no_cloud_bit) > 0) mask_out[mask_out %in% no_cloud_bit] <- 0
-
-# Load forest inspectorate boundaries and filter for Vipiteno
-# FLAG: Hardcoded path. Consider making this configurable.
-i = vect("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/forest_administration/forest_inspectorates/ForestInspectorates_polygon.shp")
-i = i[i$NAME_IT == "Vipiteno",]
-
-# Apply spatial masking
-mask_out[mask_out != 0] <- NA
-mask_out = project(mask_out, yearly_filtered)
-mask_out = mask(mask_out, i)
-mask_out = crop(mask_out, yearly_filtered)
-
-# Additional filtering for specific monthly values
-mask_out[monthly_filtered != 38] <- NA
-
-# Apply shadow mask
-yearly_filtered = mask(yearly_filtered, mask_out, inverse = T)
-monthly_filtered = mask(monthly_filtered, mask_out, inverse = T)
-
-# Save intermediate outputs
-if (confirm_write(paste0(outfold, prefix, "_monthly_shadow.tif"))) {
-  writeRaster(monthly_filtered, paste0(outfold, prefix, "_monthly_shadow.tif"), overwrite=TRUE)
-}
-if (confirm_write(paste0(outfold, prefix, "_yearly_shadow.tif"))) {
-  writeRaster(yearly_filtered, paste0(outfold, prefix, "_yearly_shadow.tif"), overwrite=TRUE)
 }
 
 # =============================================================================
@@ -241,7 +179,7 @@ yearly_final = mask(yearly_filtered, onepx_mask)
 monthly_vect_25832 = as.polygons(monthly_final)
 yearly_vect_25832 = as.polygons(yearly_final)
 
-# Set up color tables and levels (ensure these variables are defined)
+# Set up color tables and levels (ensure these variables are defined, from the previous scripts)
 if(exists("periods") && exists("colors")) {
   levels(monthly_final) = periods_df
   coltab(monthly_final) = colors_df
@@ -252,13 +190,6 @@ if(exists("lev_year_df") && exists("col_year_df")) {
   coltab(yearly_final) <- col_year_df
 }
 
-# Final frequency check
-cat("Final frequencies:\n")
-print("Monthly (rows 30-39):")
-print(freq(monthly_final)[30:39,])
-print("Yearly:")
-print(freq(yearly_final))
-
 # =============================================================================
 # SAVE OUTPUTS (with confirmation)
 # =============================================================================
@@ -266,11 +197,10 @@ print(freq(yearly_final))
 cat("\n=== Saving final outputs ===\n")
 
 # Define output filenames
-# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
-raster_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.tif")
-raster_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832_final.tif")
-vector_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.shp")
-vector_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832_final.shp")
+raster_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832_final.tif")
+raster_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832_final.tif")
+vector_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832_final.shp")
+vector_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832_final.shp")
 
 # Write raster outputs with confirmation
 if (confirm_write(raster_filename_month)) {
@@ -291,6 +221,7 @@ if (confirm_write(vector_filename_year)) {
 print("Step 4 was successful") # Indicate successful completion of the processing step.
 print(paste("Outputs written to:", outfold)) # Print the path where the outputs are saved.
 
-dir.create(outfold, showWarnings = FALSE) # Create the output folder if it doesn't already exist, suppressing warnings.
+# Clean the folder and save intermediate steps in a subfolder
+dir.create(outfold, showWarnings = FALSE)
 files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))] # List all files in the output folder that do not contain "final" in their name. These are considered intermediate files to be moved.
 file.rename(files, file.path(outfold, "post_proc_intermediates", basename(files))) # Move the intermediate files to the 'post_proc_intermediates' subdirectory.
