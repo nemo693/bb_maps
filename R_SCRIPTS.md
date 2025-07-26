@@ -1,7 +1,7 @@
 ### R Scripts (Orchestration and Post-processing)
 
 -   **`00_RUN_Province_Damage_Update.R`**
-    -   **Purpose:** The top-level orchestrator of the entire pipeline. It sets the working directory, defines output paths, manages backups of previous runs, and sequentially calls all other R scripts. It also includes commands for generating raster overviews on the final layers and uploading them to the maps portal.
+    -   **Purpose:** The top-level orchestrator of the entire pipeline. It sets the working directory, defines output paths, manages backups of previous runs, and sequentially calls all other R scripts. It also includes commands for generating raster overviews on the final layers and uploading them to the maps portal. At the end, it moves all intermediate files into a `post_proc_intermediates` folder.
     -   **Inputs:**
         -   Previous run files (from `/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15`). Used for backing these up.
         -   Hardcoded paths to previous yearly/monthly shapefiles for area comparison.
@@ -11,13 +11,13 @@
         -   Refined rasters (application of `gdaladdo`)
         -   Copy of the new maps to the server (`scp` commands).
     -   **Key Actions:**
-        -   Sets `setwd()`.
-        -   Defines `update_name` and `outfold` (where the final products are saved).
+        -   Sets `setwd()` and defines `update_name`, `outfold`.
         -   Moves files from `fordead_15` to a backup directory.
         -   Sources `01_Import_S2_data.R`, `03_Mosaic_FORDEAD_Outputs.R`, `04_Refine_And_Mask_Damage_Products.R`, `05_Style_And_Project_Damage_Maps.R`, `06_Integrate_And_Refine_Damage_Products.R`.
         -   Executes `gdaladdo` commands.
-        -   Provides `scp` commands for file transfer (to execute manually in a terminal).
+        -   Provides `scp` commands for file transfer.
         -   Optionally allows a simple area comparisons.
+        -   Moves intermediate files to `post_proc_intermediates`.
 -   **`01_Import_S2_data.R`**
     -   **Level of interaction:** None. 
     -   **Purpose:** This script sets key parameters for the following steps, and triggers the next script. It defines the FORCE tiles to be analyzed and the temporal parameters. It calls `02_Execute_Core_FORDEAD_Processing.R`, which performs the following steps and calls fordead.
@@ -94,24 +94,20 @@
         -   Writes final GeoTIFF and Shapefile outputs.
         -   Includes post-processing adjustments for specific date labels (November, winter periods) and recalculates `last_detectable_date`.
 -   **`06_Integrate_And_Refine_Damage_Products.R`**
-    -   **Purpose:** Performs the final post-processing steps, integrating previous results, applying additional filters (stress periods, shadows, single pixels), and generating the definitive output products.
+    -   **Purpose:** Performs the final post-processing steps, integrating previous results, applying additional filters (stress periods, single pixels), and generating the definitive output products.
     -   **Inputs:**
         -   Current yearly and monthly damage rasters (from `05_Style_And_Project_Damage_Maps.R`).
         -   Previous monthly and yearly damage rasters (hardcoded paths).
         -   NDVI and NDWI stress period rasters (e.g., `output_nb_periods_stress_NDVI_merged.tif`).
-        -   QAI data for shadow masking (hardcoded path).
-        -   Forest inspectorates shapefile (`ForestInspectorates_polygon.shp`).
-        -   A base raster for projection (`base`).
     -   **Outputs:**
         -   Final yearly and monthly damage GeoTIFFs and Shapefiles (e.g., `changes_monthly_damages_july_2025_25832_final.tif`).
-        -   Intermediate post-processing files moved to `post_proc_intermediates` subdirectory.
+        -   Intermediate post-processing files.
     -   **Key Actions:**
         -   Loads current and previous damage rasters.
-        -   Integrates old detections into current results.
-        -   Applies stress period filtering based on combined NDVI/NDWI stress.
-        -   Applies shadow masking using QAI data and a specific geographic area (Vipiteno).
-        -   Removes single-pixel detections based on area.
+        -   Integrates old detections into current results based on a `fix_until` variable.
+        -   Optionally applies stress period filtering based on a `stress_filter` variable.
+        -   Removes single-pixel detections for non-fixed dates.
         -   Applies all final masks and filters.
         -   Sets color tables and levels for final outputs.
-        -   Writes final GeoTIFF and Shapefile outputs with user confirmation.
-        -   Moves intermediate files to a dedicated subdirectory.
+        -   Writes final GeoTIFF and Shapefile outputs.
+        -   Includes a `compare_outputs` function for debugging and an optional plotting section.

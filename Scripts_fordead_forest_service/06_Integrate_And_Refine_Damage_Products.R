@@ -1,7 +1,3 @@
-####### BORKIMON POSTPROCESSING HAS THE NEW VERSION; REDO REVISION FROM THERE
-
-
-
 # ------------------------------------------------------------------------------
 # Level of interaction: every run.
 #               - update path to previous outputs (used to fix past detections).
@@ -37,16 +33,32 @@
 # todo: revise stress period filtering
 # todo: write parameters separately as a file (e.g. outfold keeps reverting to an older setting)
 
-# =============================================================================
-# CONFIRMATION FUNCTION
-# =============================================================================
+stress_filter = F
 
-# TO UPDATE # first run of the year: year in the name
-curr_year = 2025
+# Check here the index of periods to choose which ones to pick for the following steps
+print(lev)
 
-confirm_write <- function(filename) {
-  response <- readline(prompt = paste("Do you want to write or overwrite", filename, "? (yes/no):"))
-  tolower(response) == "yes"
+
+####
+compare_outputs <- function(layer, old_layer, view = F) {
+  f1 = freq(layer)
+  f2 = freq(old_layer)
+  t = f1$value
+  count1 = f1$count
+  count2 = f2$count
+  length_diff = length(count1) - length(count2)
+  if(length_diff > 0) count2_padded = c(count2, rep(NA, length_diff)) else count2_padded = count2
+  px_diff = count1 - count2_padded
+  percentage_diff = (px_diff) / count2_padded * 100
+  df <- data.frame(
+    t = t,
+    count_old = count2_padded,
+    count_new = count1,
+    perc_diff = percentage_diff,
+    px_diff = px_diff
+  )
+  print(df)
+  if(view) View(df)
 }
 
 library(terra)
@@ -59,127 +71,71 @@ library(terra)
 # ==============================================================================
 
 # Load current detection results
-yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832.tif"))
+yearly_original = rast(paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832.tif"))
 yearly = yearly_original
-monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832.tif"))
+monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832.tif"))
 
-# TO UPDATE # previous run (or run from which you want to fix previous detections)
 # Load previous detection results for integration
-old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") 
+# INTERACTION ----
+# Update the paths to the update from which the previous detections to be fixed
+# are taken (usually the last one before the one currently being generated).
+old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") # The latest update that was delivered (using this pipeline). should run at regular intervals and come up with a rule here
 old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_yearly_damages_june_2025_25832_final.tif")
 
-
-# glpat-pvyAi7X6uQqG5yf2_85b
-# =============================================================================
-# INTEGRATE OLD DETECTIONS
-# =============================================================================
-
-cat("\n=== Integrating old detections ===\n")
-
-# TO UPDATE # enter the period until which the detections should be fixed
-# Filter old monthly detections (adjust threshold as needed)
-# Remove values > 36 (was 28 in original script - adjust based on your needs)
-old_monthly_filtered = old_monthly
-old_monthly_filtered[old_monthly_filtered > 39] <- NA
-
-# Create condition mask for where old detections should be preserved
-condition1 = !is.na(old_monthly_filtered)
-
-# Integrate old detections into current results
-monthly[condition1] <- old_monthly_filtered[condition1]
-yearly[condition1] <- old_yearly[condition1]
-
-# Calculate difference for monitoring
-difference = yearly - yearly_original
-
-cat("Frequencies after integration:\n")
-print("Monthly:")
-print(freq(monthly))
-print("Yearly:")
-print(freq(yearly))
-
-# Save intermediate outputs
-if (confirm_write(paste0(outfold, prefix, "_monthly_integration.tif"))) {
-  writeRaster(monthly, paste0(outfold, prefix, "_monthly_integration.tif"), overwrite=TRUE, datatype = "INT1U")
-}
-if (confirm_write(paste0(outfold, prefix, "_yearly_integration.tif"))) {
-  writeRaster(yearly, paste0(outfold, prefix, "_yearly_integration.tif"), overwrite=TRUE, datatype = "INT1U")
-}
-
-freq(yearly)
+# Optional, can be useful for debugging
+# Compare the final output from the previous run to the current output (pre post-processing)
+# Can be deployed at any point of the script adjusting inputs to compare two different versions.
+#compare_outputs(monthly, old_monthly)
 
 # =============================================================================
-# STRESS PERIOD FILTERING (ADVANCED FILTERING)
+# STRESS PERIOD FILTERING (OPTIONAL ADVANCED FILTERING)
 # =============================================================================
 
-cat("\n=== Applying stress period filtering ===\n")
-
-# Load stress period masks
-# FLAG: Hardcoded paths. Consider making these configurable.
-ndvi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDVI_merged.tif")
-ndwi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDWI_merged.tif")
-
-# Create combined stress filter (2 or more stress periods)
-filter_2or2 = (ndvi_stress > 1) | (ndwi_stress > 1)
-filter_2or2 = project(filter_2or2, monthly)
-filter_2or2[filter_2or2 == 0] <- NA
-
-# Create mask for specific conditions (monthly == 38 and stress periods)
-mask = (filter_2or2 == 1 & (monthly == 38))
-mask[!mask] <- NA
-
-# Apply stress period filtering
-monthly_filtered = mask(monthly, mask, inverse = T)
-yearly_filtered = mask(yearly, monthly_filtered)
-
-# Save intermediate outputs
-if (confirm_write(paste0(outfold, prefix, "_monthly_stress.tif"))) {
-  writeRaster(monthly_filtered, paste0(outfold, prefix, "_monthly_stress.tif"), overwrite=TRUE)
-}
-if (confirm_write(paste0(outfold, prefix, "_yearly_stress.tif"))) {
-  writeRaster(yearly_filtered, paste0(outfold, prefix, "_yearly_stress.tif"), overwrite=TRUE)
+if(stress_filter) {
+  cat("\n=== Applying stress period filtering ===\n")
+  
+  # Load number of stress periods file
+  # These files contain the number of periods when a pixel was detected as
+  # disturbed, but then reverted to healty (stress periods as defined by fordead).
+  # These areas, switching back and forth, can be considered unreliable detections 
+  # especially during periods neighboring winter, where data quality is lower.
+  # These areas can be masked out for specific periods, a decision to take 
+  # following visual inspection of the final product.
+  ndvi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDVI_merged.tif")
+  ndwi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDWI_merged.tif")
+  
+  # Create combined stress filter: if 2 or more stress periods for at least one of
+  # the two indices occur, exclude the unreliably detected pixel
+  filter_2or2 = (ndvi_stress > 1) | (ndwi_stress > 1)
+  filter_2or2 = project(filter_2or2, monthly)
+  filter_2or2[filter_2or2 == 0] <- NA
+  
+  # Create the mask limited to the specific period which needs to be targeted (monthly == 38 and stress periods flag)
+  # these are typically one or more periods between October and April
+  mask = (filter_2or2 == 1 & (monthly == 38))
+  mask[!mask] <- NA
+  
+  # Apply mask
+  monthly_filtered = mask(monthly, mask, inverse = T)
+  yearly_filtered = mask(yearly, monthly_filtered)
+  
+  # Compare the final output from the previous run to the current output (pre post-processing)
+  compare_outputs(monthly_filtered, old_monthly)
+  
+  # Save intermediate outputs
+  writeRaster(monthly_filtered, paste0(outfold, prefix, "_monthly_stress.tif"), overwrite=TRUE, datatype = "INT1U")
+  writeRaster(yearly_filtered, paste0(outfold, prefix, "_yearly_stress.tif"), overwrite=TRUE, datatype = "INT1U")
+} else {
+  monthly_filtered = monthly
+  yearly_filtered = yearly
 }
 
-# =============================================================================
-# SINGLE PIXEL REMOVAL
-# =============================================================================
+##
 
-cat("\n=== Removing single pixel detections ===\n")
+monthly_final = monthly_filtered
+yearly_final = yearly_filtered
 
-# Create mask for connected components
-onepx_mask = yearly_filtered
-onepx_mask[!is.na(onepx_mask)] <- 0
-
-# Convert to polygons and calculate areas
-onepx_mask_shp = as.polygons(onepx_mask, dissolve = T)
-onepx_mask_shp = disagg(onepx_mask_shp)
-onepx_mask_shp$area = expanse(onepx_mask_shp, unit = "ha")
-
-cat("Total area before filtering:", sum(onepx_mask_shp$area), "ha\n")
-
-# Filter out small patches (>0.011 ha threshold)
-onepx_mask_shp_filtered = onepx_mask_shp[onepx_mask_shp$area > 0.011]
-
-cat("Total area after filtering:", sum(onepx_mask_shp_filtered$area), "ha\n")
-
-# Convert back to raster
-onepx_mask = rasterize(onepx_mask_shp_filtered, monthly)
-
-# =============================================================================
-# FINAL PROCESSING AND OUTPUT
-# =============================================================================
-
-cat("\n=== Finalizing outputs ===\n")
-
-# Apply final masks
-monthly_final = mask(monthly_filtered, onepx_mask)
-yearly_final = mask(yearly_filtered, onepx_mask)
-
-# Create vector versions
-monthly_vect_25832 = as.polygons(monthly_final)
-yearly_vect_25832 = as.polygons(yearly_final)
-
-# Set up color tables and levels (ensure these variables are defined, from the previous scripts)
+# Set up color tables and levels (ensure these variables are defined)
 if(exists("periods") && exists("colors")) {
   levels(monthly_final) = periods_df
   coltab(monthly_final) = colors_df
@@ -191,37 +147,113 @@ if(exists("lev_year_df") && exists("col_year_df")) {
 }
 
 # =============================================================================
-# SAVE OUTPUTS (with confirmation)
+# INTEGRATE OLD DETECTIONS
+# =============================================================================
+
+cat("\n=== Integrating old detections ===\n")
+
+# Interaction ----
+#### Hard Fix Detections Before a Given Date in the Previous Update ####
+fix_until = 37
+old_monthly_filtered = old_monthly
+old_monthly_filtered[old_monthly > fix_until] <- NA
+
+# Create condition mask for where old detections should be preserved
+condition1 = (monthly_final <= fix_until) # where the detections pre-date the fix date - delete
+condition2 = !is.na(old_monthly_filtered) # where the old layer had some detections - write
+condition12 = condition1 | condition2
+
+# Integrate old detections into current results
+monthly_final[condition12] <- old_monthly_filtered[condition12]
+yearly_final[condition12] <- old_yearly[condition12]
+yearly_final = mask(yearly_final, monthly_final)
+
+# Save intermediate outputs
+writeRaster(monthly_final, paste0(outfold, prefix, "_monthly_integration.tif"), overwrite=TRUE, datatype = "INT1U")
+writeRaster(yearly_final, paste0(outfold, prefix, "_yearly_integration.tif"), overwrite=TRUE, datatype = "INT1U")
+
+# =============================================================================
+# SINGLE PIXEL REMOVAL
+# =============================================================================
+
+cat("\n=== Removing single pixel detections ===\n")
+
+# Initiate mask
+onepx_mask = yearly_final
+onepx_mask[!is.na(onepx_mask)] <- 0
+
+# Convert to polygons and calculate areas
+onepx_mask_shp = as.polygons(onepx_mask, dissolve = T)
+onepx_mask_shp = disagg(onepx_mask_shp)
+onepx_mask_shp$area = expanse(onepx_mask_shp, unit = "ha")
+
+cat("Total area before single-pixels filtering:", sum(onepx_mask_shp$area), "ha\n")
+
+# Filter out small patches (>0.011 ha threshold)
+onepx_mask_shp_filtered = onepx_mask_shp[onepx_mask_shp$area > 0.011]
+
+cat("Total area after single-pixels filtering:", sum(onepx_mask_shp_filtered$area), "ha\n")
+
+# Convert back to raster
+onepx_mask = rasterize(onepx_mask_shp_filtered, monthly)
+condition_1px = !condition12 & is.na(onepx_mask)
+
+# Apply onepx mask only to non-fixed dates
+monthly_final[condition_1px] = NA
+yearly_final = mask(yearly_final, monthly_final)
+
+compare_outputs(layer = monthly_final, old_layer = old_monthly)
+compare_outputs(layer = yearly_final, old_layer = old_yearly)
+
+# =============================================================================
+# FINAL PROCESSING AND OUTPUT
+# =============================================================================
+
+cat("\n=== Finalizing outputs ===\n")
+
+# Create vector versions
+monthly_vect_25832 = as.polygons(monthly_final)
+yearly_vect_25832 = as.polygons(yearly_final)
+
+# Plot Optional ----
+# Generate plot comparing evolution throughout years
+# Final frequency check
+f = freq(monthly_final)
+f[(nrow(f)+1):(nrow(f)+10), ] = 0
+# Convert the date column to Date type
+f$Date <- as.Date(substr(f[,2], 1, 10))
+# Extract year and day of year
+f$Year <- format(f$Date, "%Y")
+f$DayOfYear <- as.numeric(format(f$Date, "%j"))
+plot(NULL, xlim = c(80, 320), ylim = range(f[,3], na.rm = TRUE),
+     xlab = "Day of Year", ylab = "Value", main = "Yearly Series Overlaid")
+# Assign colors
+years <- unique(na.omit(f$Year))
+colors <- rainbow(length(years))
+# Plot each year
+for (i in seq_along(years)) {
+  subset_data <- f[f$Year == years[i], ]
+  lines(subset_data$DayOfYear, subset_data[,3], col = colors[i], lwd = 2)
+}
+legend("topright", legend = years, col = colors, lty = 1, lwd = 2)
+
+
+# =============================================================================
+# SAVE OUTPUTS
 # =============================================================================
 
 cat("\n=== Saving final outputs ===\n")
 
 # Define output filenames
-raster_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832_final.tif")
-raster_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832_final.tif")
-vector_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, curr_year, "25832_final.shp")
-vector_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, curr_year, "25832_final.shp")
+raster_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.tif")
+raster_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832_final.tif")
+vector_filename_month = paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832_final.shp")
+vector_filename_year = paste0(outfold, prefix, "_", "yearly_damages_", update_name, "_2025_25832_final.shp")
 
 # Write raster outputs with confirmation
-if (confirm_write(raster_filename_month)) {
-  writeRaster(monthly_final, raster_filename_month, datatype = "INT1U", overwrite = TRUE)
-}
-if (confirm_write(raster_filename_year)) {
-  writeRaster(yearly_final, raster_filename_year, datatype = "INT1U", overwrite = TRUE)
-}
+writeRaster(monthly_final, raster_filename_month, datatype = "INT1U", overwrite = TRUE)
+writeRaster(yearly_final, raster_filename_year, datatype = "INT1U", overwrite = TRUE)
+writeVector(monthly_vect_25832, vector_filename_month, overwrite = TRUE)
+writeVector(yearly_vect_25832, vector_filename_year, overwrite = TRUE)
 
-# Write vector outputs with confirmation
-if (confirm_write(vector_filename_month)) {
-  writeVector(monthly_vect_25832, vector_filename_month, overwrite = TRUE)
-}
-if (confirm_write(vector_filename_year)) {
-  writeVector(yearly_vect_25832, vector_filename_year, overwrite = TRUE)
-}
-
-print("Step 4 was successful") # Indicate successful completion of the processing step.
-print(paste("Outputs written to:", outfold)) # Print the path where the outputs are saved.
-
-# Clean the folder and save intermediate steps in a subfolder
-dir.create(outfold, showWarnings = FALSE)
-files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))] # List all files in the output folder that do not contain "final" in their name. These are considered intermediate files to be moved.
-file.rename(files, file.path(outfold, "post_proc_intermediates", basename(files))) # Move the intermediate files to the 'post_proc_intermediates' subdirectory.
+cat("Processing completed. Inspect the outputs. \n")

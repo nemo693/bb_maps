@@ -46,6 +46,12 @@ source("04_Refine_And_Mask_Damage_Products.R") # Refines and masks damage produc
 source("05_Style_And_Project_Damage_Maps.R") # Prepares and styles damage maps for output.
 source("06_Integrate_And_Refine_Damage_Products.R") # Integrates historical data and applies final filters.
 
+# Now inspect the outputs and evaluate whether some optional steps are needed
+
+dir.create(file.path(outfold, "post_proc_intermediates"), showWarnings = FALSE)
+files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))]
+file.rename(files, file.path(outfold, "post_proc_intermediates", basename(files)))
+
 # --- Finalization Steps ---
 
 # Generate Overviews (Pyramids) for the final raster products for better
