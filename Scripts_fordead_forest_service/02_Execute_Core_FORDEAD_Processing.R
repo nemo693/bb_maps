@@ -1,39 +1,30 @@
 # ------------------------------------------------------------------------------
 # Script:       02_Execute_Core_FORDEAD_Processing.R
+#
+# Level of interaction: None.
+#
 # Purpose:      This script acts as the bridge between the R orchestration and the Python FORDEAD core.
-#               It handles initial data preprocessing, R-based QAI mask generation, and prepares
+#               It handles initial data preprocessing (S2 BOA data ingestion), R-based QAI mask generation, and prepares
 #               and executes the Python FORDEAD scripts for each grid cell and vegetation index.
 #
 # Inputs:
-#   - Parameters from 01_Import_S2_data.R (e.g., `grids`, `train_period_min`, `train_period_max`, `ignored_doy`).
+#   - Parameters from 01_Import_S2_data.R.
 #   - Raw Sentinel-2 BOA and QAI TIFFs from `in_path`.
-#   - Forest mask shapefile (`forest_mask`).
+#   - Forest mask shapefile.
 #
 # Outputs:
 #   - Organized BOA data and generated QAI masks in `_boa` directories.
 #   - Parameter files (`param.py`) for Python scripts.
-#   - Intermediate mask files (`mask_nodata.tif`, `valid_obs.tif`).
-#   - Outputs from Python FORDEAD scripts (e.g., `coeff_model.tif`, `sufficient_coverage_mask.tif`).
+#   - Outputs from Python FORDEAD scripts.
 #
 # Operations:
-#   1. Defines some settings for the FORDEAD process (thresholds, python paths).
-#   2. Manages the `qai_version` and generates/activates QAI masks based on Sentinel-2 QAI data.
+#   1. Defines several settings for the FORDEAD process (thresholds, python paths).
+#   2. Imports BOA files and explodes them (each band in a separate tif file), and imports and processes QAI files into masks (masking cloud cover and snow).
 #   3. Prepares a `param.py` file with various parameters for the Python scripts.
 #   4. Calls external Python scripts (`fordead_1.py`, `fordead_2.py`, `fordead_3.py`) using `system()` calls.
-#   5. Performs a "dummy mask" computation to ensure algorithm stability.
-# ------------------------------------------------------------------------------
-# to add: check if the tile is already processed with the latest data (skip)
-
-##### DATA PREPROCESSING NEEDS TO BE SEPARATED AS IT IS NOW IN COMMON WITH THE OTHER SCRIPT#####
-# for duplicates, the first image is taken (e.g. among sensors ABC)
-
-# install.packages("remotes")
-# remotes::install_github("nathan-russell/hashmap")
-# remotes::install_github("jkruppa/dataTools")
 
 library(terra)
 library(reticulate)
-#library(dataTools)
 
 ####### SETTINGS ########
 
@@ -53,6 +44,7 @@ fordead_path_2 = paste0(script_path, "/fordead_2.py")#
 fordead_path_3 = paste0(script_path, "/fordead_3.py")# 
 
 # threshold of anomaly, 0.16 default. Don't change this or fordead will run from scratch. 
+# deviation of observed index value from modeled index value which determines an anomaly
 thr_anomaly = 0.16
 
 # Custom formula for additional local masking. Improves the handling of missed
@@ -70,7 +62,6 @@ area = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/GIS/boundaries/province/province_from_fo
 # working fine but in the latest updates is shows more and more.
 soil = "True"
 
-# FLAG: unused
 # Province mask
 prov_mask = "True"
 
@@ -90,9 +81,6 @@ mult.files = "False"
 
 # Get start time of analysis
 mask_time = Sys.time()
-
-# QAI VERSION SETTINGS STILL NEED TO BE CHANGED MANUALLY WHEN A NEW MASK VERSION 
-# IS ADDED, IN THE MIDDLE OF THE SCRIPT
 
 # feature to kill
 qai_version = "scx" # snow cloud shadow (filters for snow and cloud, not cloud shadow)
@@ -120,25 +108,24 @@ for(g in grids) {
   
   print(paste0("processing grid ", g)) # Display the current grid being processed for user information.
   
-    # Function to rename bands of a raster according to spectral bands and dates.
+  # Function to rename bands of a raster according to spectral bands and dates.
   # Used throughout the script
   # This is crucial for consistent naming conventions across different BOA images.
   # Reads a file or a stack, and names the bands based on the dates in the paths.
-  
-  myf = function(boa) {
-    # Load the BOA TIFF file as a raster image.
-    img = rast(boa)
-    
-    # Extract the date from the filename (assuming it's part of the filename).
-    dd = strsplit(boa, "/")
-    dd = as.data.frame(dd)
-    dd = dd[nrow(dd),] # Get the last element (filename).
-    dd = substr(dd, 1, nchar(dd)-4) # Remove file extension.
-    
-    # Rename the raster bands to include the date and band name (e.g., "YYYYMMDD_B02").
-    names(img) <- paste0(rep(dd, each = 10), c("_B02", "_B03", "_B04", "_B05", "_B06", "_B07", "_B08", "_B8A", "_B11", "_B12"))
-    return(img)
-  }
+    myf = function(boa) {
+      # Load the BOA TIFF file as a raster image.
+      img = rast(boa)
+      
+      # Extract the date from the filename (assuming it's part of the filename).
+      dd = strsplit(boa, "/")
+      dd = as.data.frame(dd)
+      dd = dd[nrow(dd),] # Get the last element (filename).
+      dd = substr(dd, 1, nchar(dd)-4) # Remove file extension.
+      
+      # Rename the raster bands to include the date and band name (e.g., "YYYYMMDD_B02").
+      names(img) <- paste0(rep(dd, each = 10), c("_B02", "_B03", "_B04", "_B05", "_B06", "_B07", "_B08", "_B8A", "_B11", "_B12"))
+      return(img)
+    }
   
   #### PREPROCESSING ####
   
@@ -147,7 +134,6 @@ for(g in grids) {
   # Check if the BOA output directory for the current grid exists.
   # If it does not exist, it indicates an initial run for this grid, and the script will stop.
   if(!dir.exists(paste0(out_path, g, "_boa"))) {
-    
     print(paste0("Directory ", out_path, g, "_boa ", "does not exist.")) # Inform the user that the directory is missing.
     stop() # Halt execution as the required input directory is not found.
     
@@ -268,12 +254,9 @@ for(g in grids) {
     #### QAI ####
     # This section manages the QAI (Quality Assessment Index) masks, ensuring the correct version is active.
     
-    # To kill
     # If the BOA output folder exists, this section handles renaming masks according to the version ID.
     # This is part of managing different QAI mask versions and ensuring consistency.
-    
-    # FLAG: as these operations are already performed earlier in the script. Consider refactoring.
-    
+  
     # List original BOA files for the current grid.
     f = list.files(paste0(in_path, g), full.names = T)
     f = f[grep("BOA.tif$", f)]
@@ -288,19 +271,12 @@ for(g in grids) {
     
     # Read the last QAI mask version used to create masks from a saved RData file.
     curr_qai_version = readRDS(paste0(script_path, "/qai_version")) 
-    # can handle silently as functionality is being deprecated
-    #print(paste0("current qai version is: ", curr_qai_version)) # Display the currently active QAI version for user information.
-    
-    # to kill
+
     # If a new QAI version is detected, or if an update/force mask generation is
     # triggered, this block generates or activates the corresponding masks and
     # deactivates previous ones.
     if(curr_qai_version != qai_version | updating == T | force_masks == T) {
-      
-      #print("checkpoint 1")
-      
       # select the qai files in the source folder - ALSO HERE, THIS IS A DUPLICATE
-      # FLAG: Redundant code. This logic is already present earlier in the script.
       f = list.files(paste0(in_path, g), full.names = T)
       f = f[grep("QAI.tif$", f)]
       f = f[grep("SEN2", f)]
@@ -310,14 +286,10 @@ for(g in grids) {
       
       # get/update the masks
       if(get_new_images == T) {
-        
-        # kill clause section
         # If `force_masks` is FALSE, the script checks for existing masks and activates them if they match the target QAI version.
         if(force_masks == F) {
-          
           avail_masks = list.files(boa_d, recursive = T, full.names = T, pattern = qai_version)
           active_masks = list.files(boa_d, recursive = T, full.names = T, pattern = "CLM")
-          
           avail_masks_dates = substr(basename(avail_masks), 5, 12)
           missing_masks = dates[!(dates %in% avail_masks_dates)]
           
@@ -330,7 +302,6 @@ for(g in grids) {
               file.rename(from = active_masks[!grepl(qai_version, active_masks)], 
                           to = gsub(pattern = "CLM", "INA", x = active_masks[!grepl(qai_version, active_masks)]))
             }
-            
             
             print("bulk activation")
             # Activate the target masks by renaming them from 'INA' (inactive) to 'CLM' (active).
@@ -494,7 +465,6 @@ for(g in grids) {
       
       print("running p1")
       # Execute the first FORDEAD Python script for preprocessing.
-      # FLAG: `system()` call creates a dependency on the system's Python installation and the `fordead_path_1` script.
       system(paste0(myenv_python, " ",fordead_path_1))
       
       # Save a copy of the parameter file to the output directory for the current FORDEAD run.

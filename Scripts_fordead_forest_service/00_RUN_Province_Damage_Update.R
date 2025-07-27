@@ -4,9 +4,9 @@
 # the copy is in fordead_15_updates/fordead_15
 
 # Define the name for the current update, typically representing the month.
-update_name = "july" 
+update_name = "july_test" 
 # Define the base output folder for the final products of this run.
-outfold <- "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_01_07_2025/" 
+outfold <- "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_01_07_2025_test/" 
 # Backup the previous run to this folder (define the folder name)
 # FLAG: Hardcoded backup directory. Consider making this dynamic (e.g., using `update_name` or current date).
 backup_prev_run_to = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15_forest_service_updates/jun_2025/"
@@ -15,6 +15,7 @@ backup_prev_run_to = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/for
 
 # Set the working directory for the script. This ensures all relative paths are resolved correctly (mostly script calls).
 setwd("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Scripts_fordead_forest_service/")
+setwd("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/temp/setup_fordead_copy_docs/Scripts_fordead_forest_service/")
 
 # --- Backup Previous Run Outputs ---
 # This section handles backing up the results from the previous pipeline execution.
@@ -48,6 +49,7 @@ source("05_Style_And_Project_Damage_Maps.R") # Prepares and styles damage maps f
 source("06_Integrate_And_Refine_Damage_Products.R") # Integrates historical data and applies final filters.
 
 # Now inspect the outputs and evaluate whether some optional steps are needed
+# eventually go back to step 6 and rerun with additional masking on
 
 dir.create(file.path(outfold, "post_proc_intermediates"), showWarnings = FALSE)
 files <- list.files(outfold, full.names = TRUE)[!grepl("final", list.files(outfold))]

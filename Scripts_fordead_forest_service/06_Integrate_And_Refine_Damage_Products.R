@@ -1,43 +1,35 @@
-# ------------------------------------------------------------------------------
 # Level of interaction: every run.
 #               - update path to previous outputs (used to fix past detections).
-#               - 
+#               - run this once, then evaluate if optional masking is needed
 #
 # Script:       06_Integrate_And_Refine_Damage_Products.R
-# Purpose:      Performs the final post-processing steps, integrating previous results,
-#               applying additional filters (stress periods, shadows, single pixels),
-#               and generating the definitive output products.
+#
+# Purpose:      Performs the final post-processing steps, applying additional 
+#               filters (stress periods, single pixels), integrating previous 
+#               results and generating the final output products.
 #
 # Inputs:
 #   - Yearly and monthly damage rasters (from `05_Style_And_Project_Damage_Maps.R`).
-#   - Monthly and yearly damage rasters from previous updates (hardcoded paths in the script).
-#   - NDVI and NDWI stress period rasters (optional).
+#   - Monthly and yearly damage rasters from previous updates.
+#   - NDVI and NDWI stress period rasters (for optional masking).
 #
 # Outputs:
-#   - Final yearly and monthly damage GeoTIFFs and Shapefiles (e.g., `changes_monthly_damages_july_2025_25832_final.tif`).
-#   - Intermediate post-processing files moved to `post_proc_intermediates` subdirectory.
+#   - Final yearly and monthly damage GeoTIFFs and Shapefiles.
 #
 # Operations:
 #   1. Loads current and previous damage rasters.
-#   2. Integrates old detections into current results.
 #   3. Applies stress period filtering based on combined NDVI/NDWI stress.
-#   4. Applies shadow masking using QAI data and a specific geographic area (Vipiteno).
 #   5. Removes single-pixel detections based on area.
-#   6. Applies all final masks and filters.
+#   2. Integrates old detections into current results.
 #   7. Sets color tables and levels for final outputs.
 #   8. Writes final GeoTIFF and Shapefile outputs with user confirmation.
 #   9. Moves intermediate files to a dedicated subdirectory.
-# ------------------------------------------------------------------------------
 
-# todo: set permanent changes to period with at least 2 months of check
-# todo: revise stress period filtering
-# todo: write parameters separately as a file (e.g. outfold keeps reverting to an older setting)
-
+ 
 stress_filter = F
 
 # Check here the index of periods to choose which ones to pick for the following steps
-# FLAG: Undefined variable `lev`. This will cause an error. It seems to be a leftover from a previous version of the script.
-print(lev)
+print(periods_df) # refer to the value
 
 
 ####
@@ -77,10 +69,9 @@ yearly = yearly_original
 monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2025_25832.tif"))
 
 # Load previous detection results for integration
-# INTERACTION ----
+# 1.INTERACTION ----
 # Update the paths to the update from which the previous detections to be fixed
 # are taken (usually the last one before the one currently being generated).
-# FLAG: Hardcoded paths. These should be made dynamic to avoid issues when running the pipeline in different environments.
 old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") # The latest update that was delivered (using this pipeline). should run at regular intervals and come up with a rule here
 old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_yearly_damages_june_2025_25832_final.tif")
 
@@ -92,6 +83,9 @@ old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/c
 # =============================================================================
 # STRESS PERIOD FILTERING (OPTIONAL ADVANCED FILTERING)
 # =============================================================================
+
+# skip on first run
+# eventually apply after output evaluation
 
 if(stress_filter) {
   cat("\n=== Applying stress period filtering ===\n")
@@ -115,7 +109,9 @@ if(stress_filter) {
   
   # Create the mask limited to the specific period which needs to be targeted (monthly == 38 and stress periods flag)
   # these are typically one or more periods between October and April
-  mask = (filter_2or2 == 1 & (monthly == 38))
+  
+  # 2(optional).INTERACTION ----
+  mask = (filter_2or2 == 1 & (monthly == 38)) # set here the period(s) for which excessive noise is observed
   mask[!mask] <- NA
   
   # Apply mask
@@ -155,7 +151,12 @@ if(exists("lev_year_df") && exists("col_year_df")) {
 
 cat("\n=== Integrating old detections ===\n")
 
-# Interaction ----
+compare_outputs(monthly_final, old_monthly)
+
+# 3.INTERACTION ----
+# define here the period before which detections of the previous run are to be
+# considered permanent the comparison above should helo, together with a visual
+# inspection of the results of the current and previous runs
 #### Hard Fix Detections Before a Given Date in the Previous Update ####
 fix_until = 37
 old_monthly_filtered = old_monthly

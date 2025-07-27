@@ -19,17 +19,10 @@
 #   - Temporal parameters (`train_period_max`, `detection_start_dates`, `detection_end_dates`, `ignored_doy`).
 #   - End of the detection period (`detection_end_dates`). Can be left open (now set to end of 2030).
 #
-# Outputs:
-#   - Organized BOA imagery in `_boa` and `_update` directories for each grid.
-#   All available observations are put in the _boa folders when this script is
-#   run.
-#
 # Operations:
 #   1. Defines global parameters for the FORDEAD process.
 #   2. Loops through defined detection periods.
-#   3. For each grid, manages BOA image files, moving "future" images to an `_update` directory
-#      and restoring "past" images to the main `_boa` directory.
-#   4. Sources `02_Execute_Core_FORDEAD_Processing.R` within its main loop to execute the core detection algorithm.
+#   3. Sources `02_Execute_Core_FORDEAD_Processing.R` within its main loop to execute the core detection algorithm.
 # ------------------------------------------------------------------------------
 
 cat ("Setting paths/n")
@@ -47,7 +40,7 @@ for_out_path = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_1
 script_path = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/fordead_git/forest_outputs" # path where the scripts are located
 
 
-cat("Setting parameters/n")
+cat("Setting parameters\n")
 
 # --- Configuration Parameters ---
 
@@ -104,7 +97,7 @@ index.list = c("NDVI", "NDWI")
 # (`02_Execute_Core_FORDEAD_Processing.R`), which performs the main damage
 # detection logic.
 
-cat("Executing detection algorithm\n")
+cat("Executing detection algorithm \n")
 source("02_Execute_Core_FORDEAD_Processing.R")
 
 # Print a final success message after all detection periods have been processed.

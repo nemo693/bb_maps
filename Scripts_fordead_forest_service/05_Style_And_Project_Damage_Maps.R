@@ -1,4 +1,3 @@
-# ------------------------------------------------------------------------------
 # Script:       05_Style_And_Project_Damage_Maps.R
 #
 # Level of interaction: update (once a year)
@@ -14,7 +13,7 @@
 #   - `update_name` (from `00_RUN_Province_Damage_Update.R`).
 #
 # Outputs:
-#   - Final yearly and monthly damage GeoTIFFs and Shapefiles.
+#   - Yearly and monthly damage GeoTIFFs and Shapefiles - semi-final versions.
 #
 # Operations:
 #   1. Loads the yearly and monthly damage rasters.
@@ -23,9 +22,12 @@
 #   4. Converts the raster data to vector (polygon) format.
 #   5. Includes post-processing adjustments for specific date labels (November, winter periods) and recalculates the `last_detectable_date`.
 #   6. Writes the final GeoTIFF and Shapefile outputs for both yearly and monthly products.
-# ------------------------------------------------------------------------------
+
 
 library(terra)
+
+# .0 Interaction: enter current year ----
+year_filename = 2025
 
 # Configuration
 overwrite <- TRUE  # Set this as needed
@@ -42,7 +44,7 @@ print("Processing yearly damages...")
 # Load the yearly damage raster, which is the output from the previous step.
 r_yearly <- rast(paste0(prod_fol, "NDVI_merged_masked_with_NDWI_province_only_annual.tif"))
 
-# TO UPDATE #
+#.1 Interaction: once a year pick the color for the new year ----
 # Define the color palette for yearly damage visualization.
 col_year <- c(
   "#6f8592", #2020
@@ -58,7 +60,7 @@ col_year_df <- data.frame(
   color = col_year
 )
 
-# TO UPDATE #
+# .2 Interaction: once a year, define the new label ----
 # Define labels for each year of change.
 lev_year <- c(
   'Change 2020',
@@ -85,17 +87,16 @@ yearly_25832 <- project(r_yearly, "EPSG:25832", threads = TRUE)
 # Convert the projected yearly raster data to a vector (polygon) format.
 yearly_vect_25832 <- as.polygons(yearly_25832)
 
-# TO UPDATE # filenames
 # Write the processed yearly raster output to a GeoTIFF file.
 print("Writing yearly outputs...")
 writeRaster(yearly_25832, 
-            paste0(outfold, prefix, "_yearly_damages_", update_name,  "_2025_25832.tif"), 
+            paste0(outfold, prefix, "_yearly_damages_", update_name, "_",  year_filename, "_25832.tif"), 
             datatype = "INT1U",
             overwrite = overwrite)
 
 # Write the processed yearly vector output to a Shapefile.
 writeVector(yearly_vect_25832, 
-            paste0(outfold, prefix, "_yearly_damages_", update_name,  "_2025_25832.shp"),
+            paste0(outfold, prefix, "_yearly_damages_", update_name, "_", year_filename, "_25832.shp"),
             overwrite = overwrite)
 
 # Clean up unused objects from memory to free up resources.
@@ -120,7 +121,7 @@ periods_df <- data.frame(
   label = periods
 )
 
-# TO UPDATE #
+# .3 Interaction: once a year, define the new colors for the season ----
 # Define a comprehensive color palette for monthly damage visualization.
 colors <- c(
   "#f0f0f0", "#d8d8d8", "#c1c1c1", "#a9a9a9", "#919191", "#797979", "#626262", "#4a4a4a",
@@ -164,7 +165,6 @@ if(any(november_mask)) {
 }
 
 # Determine the last detectable date by checking image paths from two orbits.
-# FLAG: Redundant logic. This calculation is also present in `04_Refine_And_Mask_Damage_Products.R`.
 images_paths <- c(
   paste0(prod_fol, "/fordead_output_NDVI_X0001_Y0004/VegetationIndex"),
   paste0(prod_fol, "/fordead_output_NDVI_X0003_Y0004/VegetationIndex")
@@ -211,18 +211,15 @@ monthly_vect_25832 <- as.polygons(monthly_25832)
 # PART 2c: WRITE FINAL OUTPUTS
 # ============================================================================
 
-# TO UPDATE # filenames
 print("Writing monthly outputs...")
 # Write the processed monthly raster output to a GeoTIFF file.
-# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 writeRaster(monthly_25832, 
-            paste0(outfold, prefix, "_monthly_damages_", update_name,  "_2025_25832.tif"), 
+            paste0(outfold, prefix, "_monthly_damages_", update_name, "_", year_filename, "_25832.tif"), 
             datatype = "INT1U", 
             overwrite = overwrite)
 # Write the processed monthly vector output to a Shapefile.
-# FLAG: Fragile naming logic. The year is hardcoded and will require manual updates.
 writeVector(monthly_vect_25832, 
-            paste0(outfold, prefix, "_monthly_damages_", update_name,  "_2025_25832.shp"),
+            paste0(outfold, prefix, "_monthly_damages_", update_name, "_", year_filename, "_25832.shp"),
             overwrite = overwrite)
 
 # Clean up unused objects from memory to free up resources.
@@ -233,3 +230,4 @@ print(paste("Outputs written to:", outfold))
 
 # Clean up unused objects from memory to free up resources.
 gc()
+

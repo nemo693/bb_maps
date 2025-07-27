@@ -1,5 +1,8 @@
 # ------------------------------------------------------------------------------
 # Script:       04_Refine_And_Mask_Damage_Products.R
+#
+# Level of interaction: None.
+#
 # Purpose:      Refines the merged outputs from the FORDEAD process by applying additional
 #               masking steps (only keep agreement areas between NDVI and NDWI,
 #               mask out agricultural areas, exclude areas outside of the
@@ -127,20 +130,11 @@ writeRaster(
   ndvi_masked_rast_out,
   paste0(fold, "NDVI_merged_masked_with_NDWI_province_lafis.tif"),
   overwrite = overwrite
-) # Write the rasterized, masked NDVI data to a TIFF file.
+) 
 
 # Generate the annual versions
 ndvi_masked_annual = ndvi_masked
 # Convert monthly/period-based first_anomaly dates to annual labels for yearly product generation.
-# FLAG: Fragile logic. Hardcoded year values will require manual updates. Delete after the new logic has been tested.
-# ndvi_masked_annual$first_anomaly[grep("2019", ndvi_masked_annual$first_anomaly)] <- "2019"
-# ndvi_masked_annual$first_anomaly[grep("2020", ndvi_masked_annual$first_anomaly)] <- "2020"
-# ndvi_masked_annual$first_anomaly[grep("2021", ndvi_masked_annual$first_anomaly)] <- "2021"
-# ndvi_masked_annual$first_anomaly[grep("2022", ndvi_masked_annual$first_anomaly)] <- "2022"
-# ndvi_masked_annual$first_anomaly[grep("2023", ndvi_masked_annual$first_anomaly)] <- "2023"
-# ndvi_masked_annual$first_anomaly[grep("2024", ndvi_masked_annual$first_anomaly)] <- "2024"
-# ndvi_masked_annual$first_anomaly[grep("2025", ndvi_masked_annual$first_anomaly)] <- "2025"
-# Improved logic: Extract 4-digit year from first_anomaly and assign it. 
 ndvi_masked_annual$first_anomaly <- stringr::str_extract(ndvi_masked_annual$first_anomaly, "\\b\\d{4}\\b")
 
 # Rasterize the annual masked NDVI data using the base raster and 'first_anomaly' field. 
@@ -152,10 +146,4 @@ writeRaster(
   overwrite = overwrite
 ) # Write the rasterized annual masked NDVI data to a TIFF file.
 
-# Killed, to delete after verifying that it's not needed in the next run
-# Generate yearly .shp
-# r = rast(paste0(fold, "NDVI_merged_masked_with_NDWI_province_only_annual.tif")) # Load the annual masked NDVI raster.
-# v = as.polygons(r) # Convert the annual raster to polygons.
-# writeVector(v, paste0(fold, "bark_beetle_damages_province_annual.shp"), overwrite = overwrite) # Write the annual bark beetle damages to a shapefile.
-# 
 gc()
