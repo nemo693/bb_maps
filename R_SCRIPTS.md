@@ -79,8 +79,8 @@
         -   Derives annual damage products.
         -   Calculates and compares damage areas with a reference dataset.
 -   **`05_Style_And_Project_Damage_Maps.R`**
-    - 
-    -   **Purpose:** Prepares the yearly and monthly damage products for final output and visualization by applying color palettes, projecting data, and converting formats.
+    -   **Level of interaction:** Update colors every year.
+    -   **Purpose:** Prepares the yearly and monthly damage products for final output and visualization by applying           color palettes, projecting data, and converting formats.
     -   **Inputs:**
         -   Yearly and monthly damage rasters (e.g., `NDVI_merged_masked_with_NDWI_province_only_annual.tif`, `NDVI_merged_masked_with_NDWI_province_lafis.tif`) from `prod_fol` (which is `for_out_path`).
         -   `update_name` (from `00_RUN_Province_Damage_Update.R`).
