@@ -8,6 +8,7 @@ update_name = "july"
 # Define the base output folder for the final products of this run.
 outfold <- "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_01_07_2025/" 
 # Backup the previous run to this folder (define the folder name)
+# FLAG: Hardcoded backup directory. Consider making this dynamic (e.g., using `update_name` or current date).
 backup_prev_run_to = "/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15_forest_service_updates/jun_2025/"
 
 ### 1.  No interactions needed in this section. The final section needs manual execution instead. See below ####

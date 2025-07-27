@@ -36,6 +36,7 @@
 stress_filter = F
 
 # Check here the index of periods to choose which ones to pick for the following steps
+# FLAG: Undefined variable `lev`. This will cause an error. It seems to be a leftover from a previous version of the script.
 print(lev)
 
 
@@ -79,6 +80,7 @@ monthly = rast(paste0(outfold, prefix, "_", "monthly_damages_", update_name, "_2
 # INTERACTION ----
 # Update the paths to the update from which the previous detections to be fixed
 # are taken (usually the last one before the one currently being generated).
+# FLAG: Hardcoded paths. These should be made dynamic to avoid issues when running the pipeline in different environments.
 old_monthly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_monthly_damages_june_2025_25832_final.tif") # The latest update that was delivered (using this pipeline). should run at regular intervals and come up with a rule here
 old_yearly = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/Products/FORDEAD_09_06_2025/changes_yearly_damages_june_2025_25832_final.tif")
 
@@ -101,6 +103,7 @@ if(stress_filter) {
   # especially during periods neighboring winter, where data quality is lower.
   # These areas can be masked out for specific periods, a decision to take 
   # following visual inspection of the final product.
+  # FLAG: Hardcoded paths. These should be made dynamic to avoid issues when running the pipeline in different environments.
   ndvi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDVI_merged.tif")
   ndwi_stress = rast("/mnt/CEPH_PROJECTS/WALDSCHAEDEN/working_folder/outputs/fordead_15/output_nb_periods_stress_NDWI_merged.tif")
   
